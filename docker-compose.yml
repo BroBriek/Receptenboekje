@@ -1,0 +1,29 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: receptenboekje:latest
+    container_name: receptenboekje
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_PATH: /app/data/receptenboekje.db
+      UPLOADS_PATH: /app/uploads
+      # Override SESSION_SECRET in a .env file or via environment
+      SESSION_SECRET: ${SESSION_SECRET:-change-me-in-production}
+    volumes:
+      # Bind-mount host directories so data persists across rebuilds.
+      # The host paths (./data, ./uploads) are relative to this compose file.
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

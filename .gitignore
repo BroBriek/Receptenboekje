@@ -1,0 +1,24 @@
+# ─── Node ───────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ─── Environment ────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ─── Data (mounted as Docker volumes) ───────────────────
+data/
+uploads/
+
+# ─── OS ─────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ─── Editor ─────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
