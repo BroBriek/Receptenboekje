@@ -1,0 +1,40 @@
+/* ── DESIGN SYSTEM & CSS VARIABLES ────────────────────────────────────────── */
+:root {
+  /* HSL tailored color palette: Cozy, Warm & Homey */
+  --bg-color: hsl(36, 40%, 97%);         /* Soft warm off-white */
+  --text-dark: hsl(235, 20%, 25%);        /* Charcoal for high-readability text */
+  --text-muted: hsl(235, 10%, 50%);
+  --white: hsl(0, 0%, 100%);
+  
+  --primary: hsl(13, 68%, 60%);          /* Warm Terracotta / Coral */
+  --primary-hover: hsl(13, 68%, 50%);
+  --primary-light: hsl(13, 68%, 93%);
+  
+  --secondary: hsl(150, 24%, 55%);        /* Sage Green */
+  --secondary-hover: hsl(150, 24%, 45%);
+  --secondary-light: hsl(150, 24%, 93%);
+  
+  --accent: hsl(37, 78%, 70%);           /* Honey / Butterscotch */
+  --accent-hover: hsl(37, 78%, 60%);
+  --accent-light: hsl(37, 78%, 94%);
+  
+  --danger: hsl(354, 70%, 54%);          /* Warm Crimson */
+  --danger-hover: hsl(354, 70%, 44%);
+  --danger-light: hsl(354, 70%, 94%);
+  
+  --border: hsl(36, 15%, 85%);           /* Cozy soft borders */
+  --border-focus: hsl(13, 68%, 60%);
+  
+  --shadow-sm: 0 4px 12px rgba(61, 64, 91, 0.04);
+  --shadow-md: 0 8px 24px rgba(61, 64, 91, 0.08);
+  --shadow-lg: 0 16px 40px rgba(61, 64, 91, 0.12);
+  
+  --font-family: 'Quicksand', system-ui, -apple-system, sans-serif;
+  --transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-pill: 9999px;
+  
+  --nav-height: 68px;
+}

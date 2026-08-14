@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ons Receptenboekje - Wekelijkse Planner & Recepten</title>
+  <meta name="description" content="Bewaar je favoriete recepten en plan je weekmenu eenvoudig met deze gezellige kookplanner.">
+  <!-- Google Fonts: Quicksand for a warm, cozy rounded look -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Lucide Icons for clean, modern icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Stylesheets (modular) -->
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/navigation.css">
+  <link rel="stylesheet" href="/css/auth.css">
+  <link rel="stylesheet" href="/css/planner.css">
+  <link rel="stylesheet" href="/css/recipes.css">
+  <link rel="stylesheet" href="/css/settings.css">
+  <link rel="stylesheet" href="/css/ingredients.css">
+  <link rel="stylesheet" href="/css/tags.css">
+  <link rel="stylesheet" href="/css/users.css">
+  <link rel="stylesheet" href="/css/overlays.css">
+</head>
+<body>
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay hidden">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- App Wrapper -->
+  <div id="app" class="app-container">
+    
+    <!-- Top Header (Hidden on Login screen) -->
+    <header id="appHeader" class="app-header hidden">
+      <div class="header-logo" id="headerLogoBtn" role="button" tabindex="0" title="Ga naar weekplanning">
+        <i data-lucide="cooking-pot" class="logo-icon text-primary"></i>
+        <h1>Receptenboekje</h1>
+      </div>
+      <div class="header-user">
+        <div id="headerUserPill" class="user-pill clickable" title="Mijn instellingen & profiel">
+          <div id="headerAvatarContainer" class="user-avatar-badge">
+            <!-- Populated with image or initial -->
+          </div>
+          <span id="usernameDisplay">Gebruiker</span>
+        </div>
+        <button id="headerSettingsBtn" class="btn-icon" title="Instellingen" aria-label="Instellingen">
+          <i data-lucide="settings"></i>
+        </button>
+        <button id="logoutBtn" class="btn-icon" title="Uitloggen" aria-label="Uitloggen">
+          <i data-lucide="log-out"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main id="mainContent" class="main-content">
+      
+      <!-- ── VIEW 1: AUTH (LOGIN & REGISTER) ── -->
+      <section id="viewAuth" class="view-section auth-container">
+        <div class="auth-card">
+          <div class="auth-header">
+            <i data-lucide="utensils" class="auth-logo-icon text-primary"></i>
+            <h2>Welkom bij het Receptenboekje</h2>
+            <p>Log in om het gezamenlijke weekmenu en je recepten te bekijken.</p>
+          </div>
+          
+          <!-- Login Form -->
+          <form id="loginForm" class="auth-form">
+            <div class="form-group">
+              <label for="loginUsername">Gebruikersnaam</label>
+              <div class="input-wrapper">
+                <i data-lucide="user"></i>
+                <input type="text" id="loginUsername" name="username" required autocomplete="username" placeholder="Bijv. brobriek">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="loginPassword">Wachtwoord</label>
+              <div class="input-wrapper">
+                <i data-lucide="lock"></i>
+                <input type="password" id="loginPassword" name="password" required autocomplete="current-password" placeholder="••••••••">
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Inloggen</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- ── VIEW 2: PLANNER (WEEKPLANNING / DASHBOARD) ── -->
+      <section id="viewPlanner" class="view-section hidden">
+        
+        <!-- Planner Navigation Tabs / View Selector -->
+        <div class="planner-view-tabs">
+          <button type="button" class="planner-tab-btn active" data-planner-tab="all">
+            <i data-lucide="layout-dashboard"></i> Alles Overzicht
+          </button>
+          <button type="button" class="planner-tab-btn" data-planner-tab="week">
+            <i data-lucide="calendar-days"></i> Weekmenu
+          </button>
+          <button type="button" class="planner-tab-btn" data-planner-tab="month">
+            <i data-lucide="calendar"></i> Maandkalender
+          </button>
+          <button type="button" class="planner-tab-btn" data-planner-tab="unplanned">
+            Lang Niet Gegeten
+          </button>
+        </div>
+
+        <!-- Section 1: Week Navigation & Week Planning Grid -->
+        <div id="plannerWeekSection" class="planner-dashboard-section">
+          <div class="section-header planner-header-row">
+            <div class="planner-navigator">
+              <button id="prevWeekBtn" class="btn-icon" title="Vorige week" aria-label="Vorige week">
+                <i data-lucide="chevron-left"></i>
+              </button>
+              <h2 id="weekTitle">Weekplanning</h2>
+              <button id="nextWeekBtn" class="btn-icon" title="Volgende week" aria-label="Volgende week">
+                <i data-lucide="chevron-right"></i>
+              </button>
+            </div>
+            <div class="planner-actions-group">
+              <button id="openShoppingListBtn" class="btn btn-outline" title="Bekijk & exporteer boodschappenlijst van deze week">
+                <i data-lucide="shopping-bag"></i>
+                <span>Boodschappenlijst</span>
+              </button>
+              <button id="openGenerateModalBtn" class="btn btn-generate" title="Stel automatisch een weekmenu samen">
+                 <i data-lucide="wand-2"></i>
+                 <span>Maak Weekmenu</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Weekly Grid Layout -->
+          <div id="weekPlanningGrid" class="planning-grid">
+            <!-- Populated by JavaScript -->
+          </div>
+        </div>
+
+        <!-- Dashboard Secondary Row for Month Calendar & Unplanned Dishes -->
+        <div class="planner-secondary-row">
+          
+          <!-- Section 2: Month Calendar Overview -->
+          <div id="plannerMonthSection" class="planner-dashboard-section planner-widget-card">
+            <div class="widget-header">
+              <div class="widget-title-group">
+                <i data-lucide="calendar" class="widget-icon primary"></i>
+                <div>
+                  <h3>Maandkalender Overzicht</h3>
+                  <p class="widget-subtitle">Klik: week selecteren &middot; Dubbelklik of lang indrukken: dag bewerken</p>
+                </div>
+              </div>
+              
+              <div class="month-navigator">
+                <button id="prevMonthBtn" class="btn-icon btn-sm" title="Vorige maand" aria-label="Vorige maand">
+                  <i data-lucide="chevron-left"></i>
+                </button>
+                <span id="calendarMonthTitle" class="month-title-display">Augustus 2026</span>
+                <button id="nextMonthBtn" class="btn-icon btn-sm" title="Volgende maand" aria-label="Volgende maand">
+                  <i data-lucide="chevron-right"></i>
+                </button>
+                <button id="todayMonthBtn" class="btn btn-outline btn-xs" title="Ga naar vandaag">Vandaag</button>
+              </div>
+            </div>
+
+            <!-- Calendar Stats Pills -->
+            <div id="calendarStatsBar" class="calendar-stats-bar">
+              <!-- Populated by JS -->
+            </div>
+
+            <!-- Calendar Grid -->
+            <div class="calendar-grid-container">
+              <div class="calendar-weekdays">
+                <span>Ma</span><span>Di</span><span>Wo</span><span>Do</span><span>Vr</span><span>Za</span><span>Zo</span>
+              </div>
+              <div id="calendarDaysGrid" class="calendar-days-grid">
+                <!-- Populated by JS -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 3: Dishes You Haven't Planned In A While -->
+          <div id="plannerUnplannedSection" class="planner-dashboard-section planner-widget-card">
+            <div class="widget-header">
+              <div class="widget-title-group">
+               
+                <div>
+                  <h3>Lang Niet Gegeten</h3>
+                  <p class="widget-subtitle">Inspiratie uit je kookboek voor recepten die lang niet zijn gepland</p>
+                </div>
+              </div>
+              <button id="refreshUnplannedBtn" class="btn-icon btn-sm" title="Vernieuw suggesties" aria-label="Vernieuw suggesties">
+                <i data-lucide="rotate-cw"></i>
+              </button>
+            </div>
+
+            <!-- Grid of Unplanned Dishes -->
+            <div id="unplannedDishesGrid" class="unplanned-dishes-grid">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- ── VIEW 3: RECIPES (LIST & BROWSE) ── -->
+      <section id="viewRecipes" class="view-section hidden">
+        <div class="section-header flex-column md-flex-row">
+          <div>
+            <h2>Receptenboek</h2>
+            <p class="section-subtitle">Gezamenlijke verzameling van favoriete gerechten</p>
+          </div>
+          <button id="addNewRecipeBtn" class="btn btn-secondary btn-with-icon">
+            <i data-lucide="plus"></i> Recept Toevoegen
+          </button>
+        </div>
+
+        <!-- Filters Block -->
+        <div class="recipes-filter-card">
+          <div class="search-bar">
+            <i data-lucide="search" class="search-icon"></i>
+            <input type="text" id="recipeSearchInput" placeholder="Zoek op titel, ingrediënt of omschrijving...">
+          </div>
+          
+          <div class="filter-tags-section">
+            <span class="filter-label">Filter op categorie:</span>
+            <div id="filterTagsList" class="filter-tags-list">
+              <!-- Populated by JavaScript -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Recipes Grid -->
+        <div id="recipesGrid" class="recipes-grid">
+          <!-- Populated by JavaScript -->
+        </div>
+      </section>
+
+      <!-- ── VIEW 4: ADD/EDIT RECIPE FORM ── -->
+      <section id="viewRecipeForm" class="view-section hidden">
+        <div class="section-header">
+          <h2 id="recipeFormTitle">Nieuw Recept Toevoegen</h2>
+          <button id="cancelRecipeFormBtn" class="btn btn-outline">Annuleren</button>
+        </div>
+
+        <form id="recipeForm" class="recipe-form" enctype="multipart/form-data">
+          <input type="hidden" id="recipeFormId" name="id">
+          
+          <div class="recipe-form-grid">
+            <!-- Left Column: Details -->
+            <div class="recipe-form-left">
+              <div class="form-card">
+                <h3>Algemene Informatie</h3>
+                <p class="form-card-subtitle">Basisgegevens van het gerecht</p>
+
+                <div class="form-group">
+                  <label for="recipeTitleInput">Titel van het gerecht *</label>
+                  <input type="text" id="recipeTitleInput" name="title" required placeholder="Bijv. Romige Pasta Carbonara">
+                </div>
+
+                <div class="form-group">
+                  <label for="recipeDescInput">Korte omschrijving</label>
+                  <textarea id="recipeDescInput" name="description" rows="3" placeholder="Vertel iets leuks over dit recept..."></textarea>
+                </div>
+
+                <div class="form-row-3 recipe-meta-row">
+                  <div class="form-group">
+                    <label for="recipeServingsInput">Personen</label>
+                    <input type="number" id="recipeServingsInput" name="servings" min="1" placeholder="Bijv. 4">
+                  </div>
+                  <div class="form-group">
+                    <label for="recipePrepInput">Voorbereiding (min)</label>
+                    <input type="number" id="recipePrepInput" name="prep_time" min="0" placeholder="Bijv. 15">
+                  </div>
+                  <div class="form-group">
+                    <label for="recipeCookInput">Kooktijd (min)</label>
+                    <input type="number" id="recipeCookInput" name="cook_time" min="0" placeholder="Bijv. 20">
+                  </div>
+                </div>
+
+                <!-- Image Upload & Stock Selector -->
+                <div class="form-group">
+                  <label>Foto van het gerecht</label>
+                  <div class="image-upload-wrapper">
+                    <div id="imagePreviewContainer" class="image-preview-container empty" tabindex="0" role="button" aria-label="Afbeelding uploaden of kiezen">
+                      <div class="preview-placeholder">
+                        <i data-lucide="upload-cloud" class="preview-icon"></i>
+                        <span class="preview-text">Upload een foto of kies uit de bibliotheek</span>
+                        <span class="preview-subtext">JPG, PNG, WebP of GIF (max. 5MB)</span>
+                      </div>
+                      <img id="recipeImagePreview" src="" alt="Voorbeeld van het gerecht" class="hidden">
+                    </div>
+                    <div class="image-upload-actions">
+                      <label for="recipeImageFile" class="btn btn-outline btn-sm cursor-pointer">
+                        <i data-lucide="upload"></i> <span id="uploadBtnText">Upload foto</span>
+                      </label>
+                      <input type="file" id="recipeImageFile" name="image" accept="image/*" class="hidden">
+
+                      <button type="button" id="openStockModalBtn" class="btn btn-secondary btn-sm">
+                        <i data-lucide="images"></i> Kies uit bibliotheek
+                      </button>
+
+                      <button type="button" id="removeRecipeImageBtn" class="btn btn-outline-danger btn-sm hidden">
+                        <i data-lucide="trash-2"></i> Verwijder foto
+                      </button>
+                    </div>
+
+                    <div id="selectedStockBadge" class="selected-stock-badge hidden">
+                      <i data-lucide="check-circle-2" class="badge-icon"></i>
+                      <span id="selectedStockText">Gekozen uit bibliotheek</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Dynamic Tags Management -->
+                <div class="form-group">
+                  <label for="newTagInput">Categorieën / Tags</label>
+                  <p class="field-hint">Typ in de zoekbalk voor suggesties of voeg een nieuwe tag toe.</p>
+                  
+                  <div class="dynamic-tag-input-row">
+                    <div class="input-wrapper flex-1" style="position: relative;">
+                      <i data-lucide="tag"></i>
+                      <input type="text" id="newTagInput" placeholder="Zoek of typ een tag..." autocomplete="off">
+                      <div id="tagSuggestions" class="suggestions-box hidden"></div>
+                    </div>
+                    <button type="button" id="addNewTagBtn" class="btn btn-secondary btn-icon-only" title="Tag toevoegen">
+                      <i data-lucide="plus"></i>
+                    </button>
+                  </div>
+
+                  <!-- Selected tags for this recipe -->
+                  <div class="selected-tags-wrapper">
+                    <span class="sub-label">Gekozen tags:</span>
+                    <div id="recipeSelectedTags" class="tag-chips-container">
+                      <!-- Chips added here -->
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Exclude from Week Menu Checkbox -->
+                <div class="form-group" style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+                  <label class="checkbox-label" for="recipeExcludeFromMenuInput">
+                    <input type="checkbox" id="recipeExcludeFromMenuInput" name="exclude_from_menu">
+                    <span>Niet opnemen in het weekmenu</span>
+                  </label>
+                  <p class="field-hint" style="margin-top: 0.35rem; margin-left: 1.6rem;">
+                    Vink dit aan als dit gerecht niet automatisch gekozen mag worden bij het genereren van een weekmenu.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column: Ingredients & Steps -->
+            <div class="recipe-form-right">
+              
+              <!-- Ingredients Builder -->
+              <div class="form-card">
+                <h3>Ingrediënten</h3>
+                <p class="form-card-subtitle">Voeg ingrediënten toe en bouw je lijst op.</p>
+                
+                <!-- Explicitly labeled input row -->
+                <div class="ingredient-input-grid">
+                  <div class="ing-col-qty">
+                    <label for="ingQty">Aantal</label>
+                    <input type="number" step="any" id="ingQty" placeholder="bijv. 250" class="ing-qty">
+                  </div>
+                  <div class="ing-col-unit">
+                    <label for="ingUnit">Eenheid</label>
+                    <input type="text" id="ingUnit" placeholder="bijv. gram, el, stuks" class="ing-unit">
+                  </div>
+                  <div class="ing-col-name">
+                    <label for="ingName">Ingrediënt *</label>
+                    <div class="ing-name-wrapper">
+                      <input type="text" id="ingName" placeholder="bijv. Spaghetti of Bloem..." autocomplete="off">
+                      <div id="ingSuggestions" class="suggestions-box hidden"></div>
+                    </div>
+                  </div>
+                  <div class="ing-col-btn">
+                    <label class="invisible-label">Toevoegen</label>
+                    <button type="button" id="addIngBtn" class="btn btn-secondary btn-icon-only" title="Ingrediënt toevoegen">
+                      <i data-lucide="plus"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Added Ingredients List -->
+                <ul id="addedIngredientsList" class="added-items-list">
+                  <!-- Dynamic ingredients list -->
+                </ul>
+              </div>
+
+              <!-- Recipe Steps Builder -->
+              <div class="form-card">
+                <h3>Bereidingsstappen</h3>
+                <p class="form-card-subtitle">Beschrijf stap voor stap hoe je het gerecht maakt.</p>
+                
+                <div class="step-input-block">
+                  <label for="stepText">Nieuwe bereidingsstap toevoegen</label>
+                  <div class="step-input-row">
+                    <textarea id="stepText" rows="3" placeholder="Beschrijf deze stap (bijv. 'Kook de pasta in ruim gezouten water beetgaar in 8-10 minuten.')..."></textarea>
+                    <button type="button" id="addStepBtn" class="btn btn-secondary btn-icon-only" title="Stap toevoegen">
+                      <i data-lucide="plus"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <ol id="addedStepsList" class="added-steps-list">
+                  <!-- Dynamic steps list -->
+                </ol>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" id="deleteRecipeFormBtn" class="btn btn-outline-danger btn-lg hidden" style="margin-right: auto;">Recept Verwijderen</button>
+            <button type="button" id="cancelRecipeFormBottomBtn" class="btn btn-outline btn-lg">Annuleren</button>
+            <button type="submit" class="btn btn-primary btn-lg">Opslaan</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- ── VIEW 5: MORE OPTIONS (MEER MENU) ── -->
+      <section id="viewMore" class="view-section hidden">
+        <div class="section-header">
+          <div>
+            <h2>Meer Opties</h2>
+            <p class="section-subtitle">Bibliotheek, account & instellingen</p>
+          </div>
+        </div>
+
+        <div class="more-menu-grid">
+          <!-- Option: Settings -->
+          <div class="more-menu-card clickable" id="moreOptionSettings">
+            <div class="more-card-icon" style="background-color: var(--accent-light); color: var(--text-dark);">
+              <i data-lucide="settings"></i>
+            </div>
+            <div class="more-card-content">
+              <h3>Instellingen & Profiel</h3>
+              <p>Wijzig je wachtwoord en stel een profielfoto in.</p>
+            </div>
+            <i data-lucide="chevron-right" class="more-card-arrow"></i>
+          </div>
+
+          <!-- Option: Ingredients -->
+          <div class="more-menu-card clickable" id="moreOptionIngredients">
+            <div class="more-card-icon" style="background-color: var(--secondary-light); color: var(--secondary);">
+              <i data-lucide="apple"></i>
+            </div>
+            <div class="more-card-content">
+              <h3>Ingrediënten Bibliotheek</h3>
+              <p>Bekijk alle gebruikte ingrediënten op alfabetische volgorde.</p>
+            </div>
+            <i data-lucide="chevron-right" class="more-card-arrow"></i>
+          </div>
+
+          <!-- Option: Ingredient Management (Admin Only) -->
+          <div class="more-menu-card clickable hidden" id="moreOptionIngredientsManage">
+            <div class="more-card-icon" style="background-color: #fef3c7; color: #d97706;">
+              <i data-lucide="salad"></i>
+            </div>
+            <div class="more-card-content">
+              <h3>Ingrediënten Beheer <span class="badge-admin">Beheerder</span></h3>
+              <p>Beheer, voeg toe en verwijder ingrediënten uit de database.</p>
+            </div>
+            <i data-lucide="chevron-right" class="more-card-arrow"></i>
+          </div>
+
+          <!-- Option: Tags (Admin Only) -->
+          <div class="more-menu-card clickable hidden" id="moreOptionTags">
+            <div class="more-card-icon" style="background-color: var(--accent-light); color: var(--accent);">
+              <i data-lucide="tags"></i>
+            </div>
+            <div class="more-card-content">
+              <h3>Tag Beheer <span class="badge-admin">Beheerder</span></h3>
+              <p>Bekijk, voeg toe en verwijder categorieën & tags.</p>
+            </div>
+            <i data-lucide="chevron-right" class="more-card-arrow"></i>
+          </div>
+
+          <!-- Option: Users (Admin Only) -->
+          <div class="more-menu-card clickable hidden" id="moreOptionUsers">
+            <div class="more-card-icon" style="background-color: var(--primary-light); color: var(--primary);">
+              <i data-lucide="users"></i>
+            </div>
+            <div class="more-card-content">
+              <h3>Gebruikersbeheer <span class="badge-admin">Beheerder</span></h3>
+              <p>Voeg nieuwe gezinsleden toe of beheer actieve accounts.</p>
+            </div>
+            <i data-lucide="chevron-right" class="more-card-arrow"></i>
+          </div>
+
+          <!-- Option: Logout -->
+          <div class="more-menu-card clickable" id="moreOptionLogout">
+            <div class="more-card-icon" style="background-color: var(--danger-light); color: var(--danger);">
+              <i data-lucide="log-out"></i>
+            </div>
+            <div class="more-card-content">
+              <h3>Uitloggen</h3>
+              <p>Meld je af op dit apparaat.</p>
+            </div>
+            <i data-lucide="chevron-right" class="more-card-arrow"></i>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── VIEW 6: SETTINGS & PROFILE ── -->
+      <section id="viewSettings" class="view-section hidden">
+        <div class="section-header">
+          <div>
+            <h2>Mijn Instellingen</h2>
+            <p class="section-subtitle">Beheer je profielfoto en accountbeveiliging</p>
+          </div>
+          <button id="backToMoreFromSettingsBtn" class="btn btn-outline">
+            <i data-lucide="arrow-left"></i> Terug
+          </button>
+        </div>
+
+        <div class="settings-grid">
+          <!-- Default Servings Card -->
+          <div class="form-card">
+            <h3>Standaard Aantal Personen</h3>
+            <p class="form-card-subtitle">Stel in voor hoeveel personen je meestal kookt. Dit getal wordt automatisch ingevuld bij gerechten op het weekmenu en bij recepten.</p>
+
+            <form id="defaultServingsForm">
+              <div class="form-group">
+                <label for="settingsDefaultServingsInput">Aantal personen</label>
+                <div class="servings-stepper-control">
+                  <button type="button" id="settingsServingsDecBtn" class="btn-stepper" aria-label="Minder personen">
+                    <i data-lucide="minus"></i>
+                  </button>
+                  <input type="number" id="settingsDefaultServingsInput" min="1" max="50" value="4" required class="servings-stepper-input">
+                  <button type="button" id="settingsServingsIncBtn" class="btn-stepper" aria-label="Meer personen">
+                    <i data-lucide="plus"></i>
+                  </button>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary">Standaard Opslaan</button>
+            </form>
+          </div>
+
+          <!-- Profile Picture Card -->
+          <div class="form-card">
+            <h3>Profielfoto</h3>
+            <p class="form-card-subtitle">Kies een leuke avatar of foto voor je profiel.</p>
+
+            <form id="avatarForm" class="avatar-form">
+              <div class="avatar-edit-layout">
+                <div class="avatar-preview-wrapper">
+                  <div id="settingsAvatarPreview" class="large-avatar-preview">
+                    <!-- Image or fallback -->
+                  </div>
+                </div>
+
+                <div class="avatar-actions">
+                  <label for="settingsAvatarInput" class="btn btn-secondary btn-sm cursor-pointer">
+                    <i data-lucide="upload"></i> Foto Kiezen
+                  </label>
+                  <input type="file" id="settingsAvatarInput" accept="image/*" class="hidden">
+                  <button type="button" id="removeAvatarBtn" class="btn btn-outline-danger btn-sm hidden">
+                    Foto Verwijderen
+                  </button>
+                  <button type="submit" id="saveAvatarBtn" class="btn btn-primary btn-sm">
+                    Foto Opslaan
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <!-- Change Password Card -->
+          <div class="form-card">
+            <h3>Wachtwoord Wijzigen</h3>
+            <p class="form-card-subtitle">Voer je huidige wachtwoord in om een nieuw wachtwoord in te stellen.</p>
+
+            <form id="changePasswordForm">
+              <div class="form-group">
+                <label for="currentPassword">Huidig Wachtwoord</label>
+                <div class="input-wrapper">
+                  <i data-lucide="lock"></i>
+                  <input type="password" id="currentPassword" required autocomplete="current-password" placeholder="••••••••">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="newPassword">Nieuw Wachtwoord</label>
+                <div class="input-wrapper">
+                  <i data-lucide="key"></i>
+                  <input type="password" id="newPassword" required autocomplete="new-password" placeholder="Minimaal 4 tekens">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="confirmNewPassword">Bevestig Nieuw Wachtwoord</label>
+                <div class="input-wrapper">
+                  <i data-lucide="check"></i>
+                  <input type="password" id="confirmNewPassword" required autocomplete="new-password" placeholder="Herhaal nieuw wachtwoord">
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary">Wachtwoord Opslaan</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── VIEW 7: INGREDIENTS BROWSER ── -->
+      <section id="viewIngredients" class="view-section hidden">
+        <div class="section-header">
+          <div>
+            <h2>Ingrediënten Bibliotheek</h2>
+            <p class="section-subtitle">Overzicht van alle ingrediënten in het receptenboek</p>
+          </div>
+          <button id="backToMoreFromIngBtn" class="btn btn-outline">
+            <i data-lucide="arrow-left"></i> Terug
+          </button>
+        </div>
+
+        <div class="ingredients-browser-card">
+          <div class="search-bar">
+            <i data-lucide="search" class="search-icon"></i>
+            <input type="text" id="ingredientSearchInput" placeholder="Zoek een ingrediënt...">
+          </div>
+
+          <div id="alphabetNav" class="alphabet-nav"></div>
+
+          <div id="ingredientsLetterGroups" class="ingredients-groups">
+            <!-- Alphabetically grouped ingredients -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ── VIEW 8: INGREDIENTS MANAGEMENT (ADMIN) ── -->
+      <section id="viewIngredientsManage" class="view-section hidden">
+        <div class="section-header">
+          <div>
+            <h2>Ingrediënten Beheer</h2>
+            <p class="section-subtitle">Beheer en verwijder ingrediënten uit de database</p>
+          </div>
+          <button id="backToMoreFromIngredientsManageBtn" class="btn btn-outline">
+            <i data-lucide="arrow-left"></i> Terug
+          </button>
+        </div>
+
+        <div class="tags-management-card">
+          <div class="tags-top-bar">
+            <div class="search-bar" style="flex: 1; max-width: 360px;">
+              <i data-lucide="search" class="search-icon"></i>
+              <input type="text" id="manageIngredientSearchInput" placeholder="Zoek een ingrediënt...">
+            </div>
+
+            <form id="adminCreateIngredientForm" class="tags-add-form">
+              <input type="text" id="adminNewIngredientName" required placeholder="Nieuw ingrediënt (bijv. Paprikapoeder)">
+              <button type="submit" class="btn btn-primary" style="white-space: nowrap;">
+                <i data-lucide="plus"></i> Toevoegen
+              </button>
+            </form>
+          </div>
+
+          <div id="manageIngredientsListContainer" class="tags-grid">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ── VIEW 9: TAGS MANAGEMENT (ADMIN) ── -->
+      <section id="viewTags" class="view-section hidden">
+        <div class="section-header">
+          <div>
+            <h2>Tag Beheer</h2>
+            <p class="section-subtitle">Beheer en verwijder categorieën & tags</p>
+          </div>
+          <button id="backToMoreFromTagsBtn" class="btn btn-outline">
+            <i data-lucide="arrow-left"></i> Terug
+          </button>
+        </div>
+
+        <div class="tags-management-card">
+          <div class="tags-top-bar">
+            <div class="search-bar" style="flex: 1; max-width: 360px;">
+              <i data-lucide="search" class="search-icon"></i>
+              <input type="text" id="tagSearchInput" placeholder="Zoek een tag...">
+            </div>
+
+            <form id="adminCreateTagForm" class="tags-add-form">
+              <input type="text" id="adminNewTagName" required placeholder="Nieuwe tag (bijv. Vegetarisch)">
+              <button type="submit" class="btn btn-primary" style="white-space: nowrap;">
+                <i data-lucide="plus"></i> Toevoegen
+              </button>
+            </form>
+          </div>
+
+          <div id="tagsListContainer" class="tags-grid">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ── VIEW 9: USER MANAGEMENT (ADMIN ONLY) ── -->
+      <section id="viewUsers" class="view-section hidden">
+        <div class="section-header">
+          <div>
+            <h2>Gebruikersbeheer</h2>
+            <p class="section-subtitle">Beheer wie toegang heeft tot het receptenboekje</p>
+          </div>
+          <button id="backToMoreFromUsersBtn" class="btn btn-outline">
+            <i data-lucide="arrow-left"></i> Terug
+          </button>
+        </div>
+
+        <div class="user-management-grid">
+          <!-- Left Column: Add User Form -->
+          <div class="form-card">
+            <h3>Nieuwe Gebruiker Aanmaken</h3>
+            <p class="form-card-subtitle">Maak een nieuw account aan voor een gezinslid.</p>
+            <form id="adminCreateUserForm">
+              <div class="form-group">
+                <label for="adminNewUsername">Gebruikersnaam</label>
+                <input type="text" id="adminNewUsername" required placeholder="Bijv. brobriek" autocomplete="username">
+              </div>
+              <div class="form-group">
+                <label for="adminNewPassword">Wachtwoord</label>
+                <input type="password" id="adminNewPassword" required placeholder="Minimaal 4 tekens" autocomplete="new-password">
+              </div>
+              <div class="form-group">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="adminNewIsAdmin"> Deze gebruiker is ook beheerder (admin)
+                </label>
+              </div>
+              <button type="submit" class="btn btn-primary btn-block">Gebruiker Aanmaken</button>
+            </form>
+          </div>
+
+          <!-- Right Column: Users List -->
+          <div class="form-card">
+            <h3>Bestaande Gebruikers</h3>
+            <p class="form-card-subtitle">Lijst van actieve accounts in het systeem.</p>
+            <ul id="adminUsersList" class="added-items-list" style="max-height: 400px; overflow-y: auto;">
+              <!-- Dynamic list of users with delete buttons -->
+            </ul>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Always Sticky Bottom Navigation Bar -->
+    <nav id="appNav" class="app-nav hidden" aria-label="Hoofdnavigatie">
+      <button id="navPlanner" class="nav-item active" data-view="Planner">
+        <i data-lucide="calendar"></i>
+        <span>Planning</span>
+      </button>
+      <button id="navRecipes" class="nav-item" data-view="Recipes">
+        <i data-lucide="book-open"></i>
+        <span>Recepten</span>
+      </button>
+      <button id="navIngredients" class="nav-item" data-view="Ingredients">
+        <i data-lucide="apple"></i>
+        <span>Ingrediënten</span>
+      </button>
+      <button id="navMore" class="nav-item" data-view="More">
+        <i data-lucide="grid"></i>
+        <span>Meer</span>
+      </button>
+    </nav>
+
+  </div>
+
+
+  <!-- ── MODAL: GENERATE WEEK MENU SETTINGS & CONFIRMATION ── -->
+  <dialog id="generateMenuModal" class="modal-dialog generate-menu-modal" closedby="any" aria-labelledby="generateModalTitle">
+    <form method="dialog" class="modal-form">
+      <div class="modal-header generate-modal-header">
+        <div>
+          <h3 id="generateModalTitle">Weekmenu Samenstellen</h3>
+          <p class="modal-subtitle">Automatisch een gevarieerd weekmenu genereren</p>
+        </div>
+        <button type="button" class="btn-close-modal" data-close-modal="generateMenuModal" aria-label="Sluiten">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        
+        <!-- Reassuring Smart Planner Info Card -->
+        <div class="planner-info-card">
+          <div class="planner-info-header">
+            <strong>Informatie over plannen</strong>
+          </div>
+          <p class="planner-info-text">
+            De planner kiest gevarieerde gerechten voor deze week. Dagen met een slotje op het weekoverzicht blijven bewaard!
+          </p>
+          <div id="modalLockedDaysNotice" class="locked-days-notice">
+            <!-- Populated dynamically with locked days list -->
+          </div>
+        </div>
+        
+        <!-- Exclude Days -->
+        <div class="modal-section">
+          <div class="modal-section-header">
+            <h4>Niet plannen op:</h4>
+            <span class="section-hint">Selecteer rust- of uit-etendagen</span>
+          </div>
+          <p class="modal-section-subtitle">Vink de dagen aan waarop je niet wilt koken (bijv. restjesdag of uit eten).</p>
+          <div class="day-select-grid">
+            <label class="day-chip-card">
+              <input type="checkbox" name="exclude_day" value="Maandag" class="day-chip-checkbox">
+              <div class="day-chip-content">
+                <span class="day-chip-short">MA</span>
+                <span class="day-chip-full">Maandag</span>
+                <span class="day-chip-badge">Vrij</span>
+              </div>
+            </label>
+            <label class="day-chip-card">
+              <input type="checkbox" name="exclude_day" value="Dinsdag" class="day-chip-checkbox">
+              <div class="day-chip-content">
+                <span class="day-chip-short">DI</span>
+                <span class="day-chip-full">Dinsdag</span>
+                <span class="day-chip-badge">Vrij</span>
+              </div>
+            </label>
+            <label class="day-chip-card">
+              <input type="checkbox" name="exclude_day" value="Woensdag" class="day-chip-checkbox">
+              <div class="day-chip-content">
+                <span class="day-chip-short">WO</span>
+                <span class="day-chip-full">Woensdag</span>
+                <span class="day-chip-badge">Vrij</span>
+              </div>
+            </label>
+            <label class="day-chip-card">
+              <input type="checkbox" name="exclude_day" value="Donderdag" class="day-chip-checkbox">
+              <div class="day-chip-content">
+                <span class="day-chip-short">DO</span>
+                <span class="day-chip-full">Donderdag</span>
+                <span class="day-chip-badge">Vrij</span>
+              </div>
+            </label>
+            <label class="day-chip-card">
+              <input type="checkbox" name="exclude_day" value="Vrijdag" class="day-chip-checkbox">
+              <div class="day-chip-content">
+                <span class="day-chip-short">VR</span>
+                <span class="day-chip-full">Vrijdag</span>
+                <span class="day-chip-badge">Vrij</span>
+              </div>
+            </label>
+            <label class="day-chip-card">
+              <input type="checkbox" name="exclude_day" value="Zaterdag" class="day-chip-checkbox">
+              <div class="day-chip-content">
+                <span class="day-chip-short">ZA</span>
+                <span class="day-chip-full">Zaterdag</span>
+                <span class="day-chip-badge">Vrij</span>
+              </div>
+            </label>
+            <label class="day-chip-card">
+              <input type="checkbox" name="exclude_day" value="Zondag" class="day-chip-checkbox">
+              <div class="day-chip-content">
+                <span class="day-chip-short">ZO</span>
+                <span class="day-chip-full">Zondag</span>
+                <span class="day-chip-badge">Vrij</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Tag Preferences -->
+        <div class="modal-section">
+          <div class="modal-section-header">
+            <h4>Voorkeur voor categorieën:</h4>
+            <button type="button" id="clearTagsSelectionBtn" class="btn-text-action" title="Selectie wissen">Wis selectie</button>
+          </div>
+          <p class="modal-section-subtitle">Selecteer een of meer categorieën. (Laat alles leeg om uit alle recepten te kiezen).</p>
+          <div id="generateTagsGrid" class="category-chip-grid">
+            <!-- Populated by JavaScript -->
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" data-close-modal="generateMenuModal">Annuleren</button>
+        <button type="button" id="confirmGenerateMenuBtn" class="btn btn-primary btn-generate-confirm">
+          Maak Weekmenu
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+
+  <!-- ── MODAL: EDIT DAY DETAILS (SEARCHABLE RECIPE PICKER & NOTES) ── -->
+  <dialog id="editDayModal" class="modal-dialog" closedby="any" aria-labelledby="editDayModalTitle">
+    <form method="dialog" class="modal-form">
+      <div class="modal-header">
+        <h3 id="editDayModalTitle">Dagaanpassing</h3>
+        <button type="button" class="btn-close-modal" data-close-modal="editDayModal" aria-label="Sluiten">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editDayDate">
+        
+        <div class="form-group">
+          <label class="checkbox-label inline-flex font-bold">
+            <input type="checkbox" id="editDaySkipPlanning"> Niet koken op deze dag (sla over)
+          </label>
+        </div>
+
+        <div class="form-group" id="editDayRecipeGroup">
+          <label>Gerecht Selecteren</label>
+          
+          <!-- Selected Recipe Display Badge -->
+          <div id="editDaySelectedRecipeBanner" class="selected-recipe-badge hidden">
+            <div class="selected-recipe-info">
+              <i data-lucide="check-circle" class="selected-check-icon"></i>
+              <span id="editDaySelectedRecipeTitle" class="selected-recipe-title">Recept titel</span>
+            </div>
+            <button type="button" id="clearSelectedRecipeBtn" class="btn-clear-recipe" title="Verwijder geselecteerd recept">
+              <i data-lucide="x"></i> Verwijder
+            </button>
+          </div>
+
+          <input type="hidden" id="editDayRecipeSelect" value="">
+
+          <!-- Search & Suggestions Box -->
+          <div class="dish-search-container">
+            <div class="search-bar">
+              <i data-lucide="search" class="search-icon"></i>
+              <input type="text" id="editDayDishSearch" placeholder="Typ om recepten te zoeken..." autocomplete="off">
+            </div>
+
+            <div id="editDayDishSuggestions" class="dish-suggestions-list">
+              <!-- Populated dynamically with rich dish suggestions -->
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group" id="editDayServingsGroup">
+          <label for="editDayServings">Aantal personen voor deze dag</label>
+          <div class="servings-stepper-control">
+            <button type="button" id="editDayServingsDecBtn" class="btn-stepper" aria-label="Minder personen">
+              <i data-lucide="minus"></i>
+            </button>
+            <input type="number" id="editDayServings" min="1" max="50" value="4" class="servings-stepper-input">
+            <button type="button" id="editDayServingsIncBtn" class="btn-stepper" aria-label="Meer personen">
+              <i data-lucide="plus"></i>
+            </button>
+          </div>
+          <p class="field-hint">De ingrediënten op de boodschappenlijst worden automatisch voor dit aantal personen geschaald.</p>
+        </div>
+
+        <div class="form-group">
+          <label for="editDayNotes">Notitie voor deze dag</label>
+          <p class="field-hint">Als er geen maaltijd is gepland, is deze notitie duidelijk zichtbaar in het weekoverzicht (bijv. 'Uit eten bij opa & oma', 'Pizza bestellen', etc.).</p>
+          <textarea id="editDayNotes" rows="3" placeholder="Voeg een notitie of extra toelichting toe..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="deleteDayPlanningBtn" class="btn btn-outline-danger" style="margin-right: auto;">Dag Legen</button>
+        <button type="button" class="btn btn-outline" data-close-modal="editDayModal">Annuleren</button>
+        <button type="button" id="saveDayChangesBtn" class="btn btn-primary">Opslaan</button>
+      </div>
+    </form>
+  </dialog>
+
+
+  <!-- ── MODAL: QUICK PLAN DISH ON DATE ── -->
+  <dialog id="quickPlanModal" class="modal-dialog" closedby="any" aria-labelledby="quickPlanModalTitle">
+    <form method="dialog" class="modal-form">
+      <div class="modal-header">
+        <h3 id="quickPlanModalTitle">Gerecht Inplannen</h3>
+        <button type="button" class="btn-close-modal" data-close-modal="quickPlanModal" aria-label="Sluiten">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="quickPlanRecipeId">
+        
+        <div class="quick-plan-recipe-summary">
+          <img id="quickPlanRecipeImg" src="" alt="" class="quick-plan-thumb hidden">
+          <div class="quick-plan-recipe-placeholder" id="quickPlanRecipePlaceholder">
+            <i data-lucide="utensils"></i>
+          </div>
+          <div>
+            <h4 id="quickPlanRecipeTitle" class="quick-plan-recipe-name">Titel van het gerecht</h4>
+            <p id="quickPlanRecipeMeta" class="quick-plan-recipe-sub">Lang niet gepland</p>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 1.25rem;">
+          <label for="quickPlanDateSelect">Kies een dag uit de actieve week:</label>
+          <select id="quickPlanDateSelect" class="form-select">
+            <!-- Populated dynamically with the 7 dates of currentWeekMonday -->
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="quickPlanCustomDate">Of kies een specifieke datum:</label>
+          <input type="date" id="quickPlanCustomDate" class="form-input">
+        </div>
+
+        <div class="form-group">
+          <label for="quickPlanServings">Aantal personen:</label>
+          <div class="servings-stepper-control">
+            <button type="button" id="quickPlanServingsDecBtn" class="btn-stepper" aria-label="Minder personen">
+              <i data-lucide="minus"></i>
+            </button>
+            <input type="number" id="quickPlanServings" min="1" max="50" value="4" class="servings-stepper-input">
+            <button type="button" id="quickPlanServingsIncBtn" class="btn-stepper" aria-label="Meer personen">
+              <i data-lucide="plus"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="quickPlanNotes">Notitie (optioneel)</label>
+          <input type="text" id="quickPlanNotes" placeholder="Bijv. Extra portie maken..." class="form-input">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" data-close-modal="quickPlanModal">Annuleren</button>
+        <button type="button" id="confirmQuickPlanBtn" class="btn btn-primary">Inplannen</button>
+      </div>
+    </form>
+  </dialog>
+
+
+  <!-- ── MODAL: VIEW FULL NOTE DIALOG ── -->
+  <dialog id="viewNoteModal" class="modal-dialog" closedby="any" aria-labelledby="viewNoteModalTitle">
+    <div class="modal-form">
+      <div class="modal-header">
+        <h3 id="viewNoteModalTitle">📝 Notitie voor dag</h3>
+        <button type="button" class="btn-close-modal" data-close-modal="viewNoteModal" aria-label="Sluiten">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="full-note-content-box">
+          <p id="viewNoteFullText" class="full-note-text"></p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="editDayFromNoteBtn" class="btn btn-secondary">Aanpassen</button>
+        <button type="button" class="btn btn-outline" data-close-modal="viewNoteModal">Sluiten</button>
+      </div>
+    </div>
+  </dialog>
+
+
+  <!-- ── MODAL: VIEW RECIPE DETAILS ── -->
+  <dialog id="recipeDetailModal" class="modal-dialog modal-large" closedby="any" aria-labelledby="recipeDetailTitle">
+    <div class="modal-form">
+      <div class="modal-header">
+        <h3 id="recipeDetailTitle">Receptdetails</h3>
+        <button type="button" class="btn-close-modal" data-close-modal="recipeDetailModal" aria-label="Sluiten">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body scrollable">
+        <div class="recipe-detail-header">
+          <div id="recipeDetailImageContainer" class="recipe-detail-img-box">
+            <!-- Image populated by JS -->
+          </div>
+          <div class="recipe-detail-summary">
+            <h2 id="recipeDetailName">Titel van Recept</h2>
+            <div id="recipeDetailTags" class="recipe-detail-tags">
+              <!-- Tags populated by JS -->
+            </div>
+
+            <div id="recipeDetailAuthorContainer" class="recipe-detail-author">
+              <!-- Author avatar & name populated by JS -->
+            </div>
+            
+            <div class="recipe-info-badges">
+              <div class="info-badge info-badge-servings">
+                <i data-lucide="users"></i>
+                <div class="recipe-servings-stepper">
+                  <button type="button" id="detailServingsDecBtn" class="btn-servings-step" title="Minder personen" aria-label="Minder personen">
+                    <i data-lucide="minus"></i>
+                  </button>
+                  <span id="recipeDetailServingsCount" class="recipe-servings-number">4</span>
+                  <span class="recipe-servings-text">personen</span>
+                  <button type="button" id="detailServingsIncBtn" class="btn-servings-step" title="Meer personen" aria-label="Meer personen">
+                    <i data-lucide="plus"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="info-badge">
+                <i data-lucide="clock"></i>
+                <span id="recipeDetailPrep">- min voorb.</span>
+              </div>
+              <div class="info-badge">
+                <i data-lucide="flame"></i>
+                <span id="recipeDetailCook">- min kook</span>
+              </div>
+              <div id="recipeDetailExcludeBadge" class="info-badge hidden" style="color: var(--text-muted); background: var(--bg-card-hover);">
+                <i data-lucide="calendar-off"></i>
+                <span>Niet op weekmenu</span>
+              </div>
+            </div>
+            <p id="recipeDetailDesc" class="recipe-detail-desc"></p>
+          </div>
+        </div>
+
+        <div class="recipe-detail-grid">
+          <!-- Ingredients column -->
+          <div class="recipe-detail-left">
+            <div class="detail-section-header">
+              <h4>Ingrediënten</h4>
+              <span id="recipeDetailScaleIndicator" class="scale-indicator-badge hidden">Aangepast voor <strong id="scaleIndicatorCount">4</strong> pers.</span>
+            </div>
+            <ul id="recipeDetailIngredientsList" class="detail-ing-list">
+              <!-- Populated by JS -->
+            </ul>
+          </div>
+          
+          <!-- Steps column -->
+          <div class="recipe-detail-right">
+            <h4>Bereidingswijze</h4>
+            <ol id="recipeDetailStepsList" class="detail-steps-list">
+              <!-- Populated by JS -->
+            </ol>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="deleteDetailRecipeBtn" class="btn btn-outline-danger" style="margin-right: auto;">Verwijderen</button>
+        <button type="button" id="editDetailRecipeBtn" class="btn btn-secondary">Bewerken</button>
+        <button type="button" class="btn btn-outline" data-close-modal="recipeDetailModal">Sluiten</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Modal: Stock Photo Library -->
+  <dialog id="stockLibraryModal" class="modal-dialog modal-large" closedby="any">
+    <div class="modal-content stock-modal-content">
+      <div class="modal-header">
+        <div class="modal-header-title">
+          <i data-lucide="images" class="modal-icon"></i>
+          <div>
+            <h3>Kies een Foto uit de Bibliotheek</h3>
+            <p class="modal-subtitle">Selecteer uit onze collectie van hoogwaardige gerechtenfoto's</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-close-modal="stockLibraryModal" aria-label="Sluiten">&times;</button>
+      </div>
+
+      <div class="modal-body stock-library-body">
+        <!-- Search Bar -->
+        <div class="stock-search-wrapper">
+          <div class="input-wrapper flex-1" style="position: relative;">
+            <i data-lucide="search"></i>
+            <input type="text" id="stockSearchInput" placeholder="Zoek een gerecht, ingrediënt of categorie..." autocomplete="off">
+            <button type="button" id="clearStockSearchBtn" class="btn-clear-search hidden" title="Zoekopdracht wissen">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Category Filter Pills -->
+        <div class="stock-categories-scroll">
+          <div id="stockCategoriesContainer" class="stock-categories-chips">
+            <!-- Populated dynamically by JS -->
+          </div>
+        </div>
+
+        <!-- Image Grid -->
+        <div id="stockImageGrid" class="stock-image-grid">
+          <!-- Populated dynamically by JS -->
+        </div>
+
+        <!-- Empty state -->
+        <div id="stockEmptyState" class="stock-empty-state hidden">
+          <i data-lucide="image-off" class="stock-empty-icon"></i>
+          <h4>Geen afbeeldingen gevonden</h4>
+          <p>Probeer een andere zoekterm of kies een andere categorie.</p>
+          <button type="button" id="resetStockFiltersBtn" class="btn btn-outline btn-sm">Reset alle filters</button>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <span id="stockCountIndicator" class="stock-count-indicator"></span>
+        <button type="button" class="btn btn-outline" data-close-modal="stockLibraryModal">Annuleren</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Modal: Shopping List (Boodschappenlijst) -->
+  <dialog id="shoppingListModal" class="modal-dialog modal-large" closedby="any" aria-labelledby="shoppingListModalTitle">
+    <div class="modal-form">
+      <div class="modal-header shopping-modal-header">
+        <div class="modal-header-title">
+          <div class="shopping-header-icon-box">
+            <i data-lucide="shopping-bag" class="modal-icon"></i>
+          </div>
+          <div>
+            <h3 id="shoppingListModalTitle">Boodschappenlijst</h3>
+            <p id="shoppingListSubtitle" class="modal-subtitle">Ingrediënten voor het geselecteerde weekmenu</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close-modal" data-close-modal="shoppingListModal" aria-label="Sluiten">&times;</button>
+      </div>
+
+      <div class="modal-body scrollable shopping-list-modal-body">
+        <!-- Top Controls: Week Navigator, Actions & View Switcher -->
+        <div class="shopping-list-controls">
+          <!-- Row 1: Week Navigation & Action Buttons -->
+          <div class="shopping-controls-header">
+            <div class="shopping-week-picker">
+              <button type="button" id="shoppingPrevWeekBtn" class="shopping-nav-btn" title="Vorige week" aria-label="Vorige week">
+                <i data-lucide="chevron-left"></i>
+              </button>
+              <div class="shopping-week-info">
+                <i data-lucide="calendar" class="shopping-cal-icon"></i>
+                <span id="shoppingWeekLabel" class="shopping-week-label">-- t/m --</span>
+              </div>
+              <button type="button" id="shoppingNextWeekBtn" class="shopping-nav-btn" title="Volgende week" aria-label="Volgende week">
+                <i data-lucide="chevron-right"></i>
+              </button>
+              <button type="button" id="shoppingTodayWeekBtn" class="shopping-today-btn" title="Ga naar deze week">
+                Deze week
+              </button>
+            </div>
+
+            <div class="shopping-actions-group">
+              <button type="button" id="copyShoppingListBtn" class="btn btn-primary btn-sm shopping-action-btn" title="Kopieer als platte tekst voor notities of WhatsApp">
+                <i data-lucide="copy"></i>
+                <span>Kopieer Lijst</span>
+              </button>
+              <button type="button" id="downloadShoppingListBtn" class="btn btn-outline btn-sm shopping-action-btn" title="Download als .txt bestand">
+                <i data-lucide="download"></i>
+                <span>Download (.txt)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Row 2: Segmented View Switcher Tabs -->
+          <div class="shopping-segmented-tabs" role="tablist" aria-label="Weergave">
+            <button type="button" id="shoppingViewCategoryBtn" class="shopping-tab-btn active" data-view="category" role="tab" aria-selected="true">
+              <i data-lucide="layout-grid"></i>
+              <span>Per Categorie</span>
+            </button>
+            <button type="button" id="shoppingViewCombinedBtn" class="shopping-tab-btn" data-view="combined" role="tab" aria-selected="false">
+              <i data-lucide="list"></i>
+              <span>Alles (A-Z)</span>
+            </button>
+            <button type="button" id="shoppingViewByDayBtn" class="shopping-tab-btn" data-view="byDay" role="tab" aria-selected="false">
+              <i data-lucide="calendar-days"></i>
+              <span>Per Recept</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Ingredient Summary Stats & Progress Bar -->
+        <div id="shoppingListSummary" class="shopping-summary-card">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Active View Content Container -->
+        <div id="shoppingListContent" class="shopping-list-content">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" id="clearCheckedItemsBtn" class="btn btn-ghost btn-sm" title="Vinkjes van alle items herstellen">
+          <i data-lucide="rotate-ccw"></i> Reset vinkjes
+        </button>
+        <button type="button" class="btn btn-outline" data-close-modal="shoppingListModal">Sluiten</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- JS Modules (loaded in dependency order) -->
+  <!-- Core -->
+  <script src="/js/app.js"></script>
+  <script src="/js/utils.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/router.js"></script>
+  <!-- Views -->
+  <script src="/js/views/auth.js"></script>
+  <script src="/js/views/planner.js"></script>
+  <script src="/js/views/recipes.js"></script>
+  <script src="/js/views/recipeDetail.js"></script>
+  <script src="/js/views/recipeForm.js"></script>
+  <script src="/js/views/settings.js"></script>
+  <script src="/js/views/ingredients.js"></script>
+  <script src="/js/views/ingredientsManage.js"></script>
+  <script src="/js/views/tags.js"></script>
+  <script src="/js/views/users.js"></script>
+  <!-- Modals -->
+  <script src="/js/modals/viewNote.js"></script>
+  <script src="/js/modals/generateMenu.js"></script>
+  <script src="/js/modals/editDay.js"></script>
+  <script src="/js/modals/stockLibrary.js"></script>
+  <script src="/js/modals/shoppingList.js"></script>
+  <!-- Bootstrap -->
+  <script src="/js/init.js"></script>
+</body>
+</html>
