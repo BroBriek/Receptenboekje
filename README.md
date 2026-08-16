@@ -1,7 +1,7 @@
 # Receptenboekje
 
 Advanced meal planner and recipe storage system built with **Node.js**, **Express**, and **SQLite**.
-This project is just a tool for personal use and is not intended for production use. 
+This project is just a tool for personal use and is not intended for professional/commercial use. 
 
 ---
 
@@ -13,11 +13,34 @@ This project is just a tool for personal use and is not intended for production 
 │   ├── server.js               # Express app entry point
 │   ├── db/
 │   │   ├── database.js         # SQLite singleton (better-sqlite3)
-│   │   └── migrate.js          # Migration runner
-│   └── middleware/
-│       └── upload.js           # Multer image upload middleware
+│   │   ├── migrate.js          # Migration runner
+│   │   └── seed_recipes.js     # Default recipe seeder
+│   ├── middleware/
+│   │   ├── auth.js             # Authentication & session middleware
+│   │   └── upload.js           # Multer image upload middleware
+│   ├── routes/
+│   │   ├── auth.js             # User login, registration & session routes
+│   │   ├── ingredients.js      # Ingredient catalogue & autocompletion routes
+│   │   ├── mealPlan.js         # Shared meal planner & menu generator routes
+│   │   ├── recipes.js          # Recipe CRUD & filtering routes
+│   │   └── tags.js             # Tag management routes
+│   └── public/                 # Frontend SPA assets
+│       ├── index.html          # SPA entry point HTML
+│       ├── index.css           # Global stylesheet entry point
+│       ├── index.js            # Frontend router & view bootstrapper
+│       ├── css/                # Modular CSS stylesheets (views, modals, components)
+│       └── js/
+│           ├── api.js          # Client-side API request helpers
+│           ├── app.js          # App state & toast notifications
+│           ├── init.js         # Initialization lifecycle
+│           ├── router.js       # Client-side router
+│           ├── utils.js        # Formatting & utility helpers
+│           ├── modals/         # Modal dialog handlers (shopping list, week menu, etc.)
+│           └── views/          # Page view controllers (recipes, planner, settings, etc.)
+├── scripts/
+│   └── download-stock.js       # Script to download stock recipe imagery
 ├── data/                       # SQLite database (gitignored, Docker volume)
-├── uploads/                    # Uploaded images  (gitignored, Docker volume)
+├── uploads/                    # Uploaded recipe images & stock library (gitignored, Docker volume)
 ├── Dockerfile                  # Multi-stage production image
 ├── docker-compose.yml          # Compose with persistent bind-mounts
 └── .env.example                # Environment variable template
@@ -41,7 +64,7 @@ npm run db:migrate
 npm run dev
 ```
 
-The server will be available at **http://localhost:3000**.
+The server will be available at **http://localhost:8080**.
 
 ---
 
@@ -69,11 +92,14 @@ docker compose down
 
 ## API
 
-| Method | Path      | Description           |
-|--------|-----------|-----------------------|
-| GET    | `/health` | Health check endpoint |
-
-_More routes will be added as features are implemented._
+| Method / Prefix   | Path              | Description                                   |
+|-------------------|-------------------|-----------------------------------------------|
+| GET               | `/health`         | Health check endpoint                         |
+| `/api/auth`       | `/*`              | User authentication & profile endpoints       |
+| `/api/recipes`    | `/*`              | Recipe CRUD, image uploads & filtering        |
+| `/api/tags`       | `/*`              | Tag management & categorisation               |
+| `/api/ingredients`| `/*`              | Ingredient catalogue & autocompletion         |
+| `/api/meal-plan`  | `/*`              | Shared meal planner & auto-menu generator     |
 
 ---
 
@@ -81,6 +107,7 @@ _More routes will be added as features are implemented._
 
 | Table                | Purpose                              |
 |----------------------|--------------------------------------|
+| `users`              | User accounts & authentication       |
 | `recipes`            | Core recipe records                  |
 | `ingredients`        | Ingredient catalogue                 |
 | `recipe_ingredients` | Quantities per recipe                |
