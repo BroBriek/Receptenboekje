@@ -8,6 +8,7 @@ const db      = require('../db/database');
 const { v4: uuidv4 } = require('uuid');
 const { requireAuth } = require('../middleware/auth');
 const upload = require('../middleware/upload');
+const { searchOnlineImages, downloadAndSaveOnlineImage } = require('../services/onlineImageService');
 
 const UPLOADS_DIR = process.env.UPLOADS_PATH || path.resolve(__dirname, '../../uploads');
 
@@ -129,6 +130,65 @@ router.get('/stock-images', requireAuth, (_req, res) => {
   } catch (err) {
     console.error('Error reading stock images manifest:', err);
     res.status(500).json({ error: 'Fout bij het ophalen van stock afbeeldingen.' });
+  }
+});
+
+// GET /api/recipes/search-online-images - Search food photos on the internet (Unsplash, Pexels, Wikimedia)
+router.get('/search-online-images', requireAuth, async (req, res) => {
+  const query = req.query.q || '';
+  const page = parseInt(req.query.page, 10) || 1;
+
+  if (!query.trim()) {
+    return res.json([]);
+  }
+
+  try {
+    const results = await searchOnlineImages(query, page);
+    return res.json(results);
+  } catch (err) {
+    console.error('Error searching online food images:', err);
+    res.status(500).json({ error: 'Fout bij het online zoeken naar afbeeldingen.' });
+  }
+});
+
+// POST /api/recipes/download-online-image - Download selected online image and save locally
+router.post('/download-online-image', requireAuth, async (req, res) => {
+  const { url, fallback_url, title } = req.body;
+
+  if (!url || typeof url !== 'string') {
+    return res.status(400).json({ error: 'Afbeeldings-URL is verplicht.' });
+  }
+
+  try {
+    const saved = await downloadAndSaveOnlineImage(url, fallback_url);
+    return res.json({
+      success: true,
+      filename: saved.filename,
+      url: saved.url,
+      title: title || 'Online foto'
+    });
+  } catch (err) {
+    console.error('Error downloading online image:', err);
+    res.status(500).json({ error: 'Fout bij het downloaden en opslaan van de afbeelding.' });
+  }
+});
+
+// GET /api/recipes/image-proxy - Proxy external images to prevent hotlink/referrer issues
+router.get('/image-proxy', async (req, res) => {
+  const { url } = req.query;
+  if (!url || (!url.startsWith('http://') && !url.startsWith('https://'))) {
+    return res.status(400).send('Invalid URL');
+  }
+
+  try {
+    const { fetchBuffer } = require('../services/onlineImageService');
+    const { buffer, contentType } = await fetchBuffer(url);
+    res.setHeader('Content-Type', contentType || 'image/jpeg');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    return res.send(buffer);
+  } catch (err) {
+    console.error('Proxy image error:', err.message);
+    return res.status(502).send('Error fetching image');
   }
 });
 

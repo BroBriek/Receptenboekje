@@ -1083,6 +1083,9 @@
 .stock-card-info {
   padding: 0.65rem 0.75rem;
   background-color: var(--white);
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
 }
 
 .stock-card-title {
@@ -1093,6 +1096,116 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.stock-card-meta-line {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.stock-card-meta-line i {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.stock-tab-nav {
+  display: flex;
+  padding: 0 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background-color: var(--card-bg, #ffffff);
+  gap: 0.5rem;
+}
+
+.stock-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.25rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: -1px;
+}
+
+.stock-tab-btn i {
+  width: 17px;
+  height: 17px;
+}
+
+.stock-tab-btn:hover {
+  color: var(--text-color);
+  border-bottom-color: var(--border);
+}
+
+.stock-tab-btn.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.badge-pill-subtle {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.15rem 0.45rem;
+  background-color: rgba(234, 88, 12, 0.12);
+  color: var(--primary);
+  border-radius: var(--radius-pill);
+}
+
+.stock-view-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.online-tag-chip {
+  cursor: pointer;
+  user-select: none;
+}
+
+.online-tag-chip:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background-color: rgba(234, 88, 12, 0.08);
+}
+
+.stock-card.downloading {
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.stock-card.downloading .stock-card-overlay {
+  opacity: 1;
+  background: rgba(15, 23, 42, 0.82);
+}
+
+.stock-card .spinner-download {
+  width: 26px;
+  height: 26px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .stock-empty-state {

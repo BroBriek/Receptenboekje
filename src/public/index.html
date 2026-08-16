@@ -1223,51 +1223,130 @@
     </div>
   </dialog>
 
-  <!-- Modal: Stock Photo Library -->
+  <!-- Modal: Stock Photo Library & Online Search -->
   <dialog id="stockLibraryModal" class="modal-dialog modal-large" closedby="any">
     <div class="modal-content stock-modal-content">
       <div class="modal-header">
         <div class="modal-header-title">
           <i data-lucide="images" class="modal-icon"></i>
           <div>
-            <h3>Kies een Foto uit de Bibliotheek</h3>
-            <p class="modal-subtitle">Selecteer uit onze collectie van hoogwaardige gerechtenfoto's</p>
+            <h3 id="stockModalHeading">Kies een Gerechtfoto</h3>
+            <p class="modal-subtitle" id="stockModalSubheading">Kies uit de ingebouwde bibliotheek of zoek live online naar miljoenen gerechten</p>
           </div>
         </div>
         <button type="button" class="btn-close" data-close-modal="stockLibraryModal" aria-label="Sluiten">&times;</button>
       </div>
 
+      <!-- Tab Switcher: Local Stock vs Online Search -->
+      <div class="stock-tab-nav">
+        <button type="button" class="stock-tab-btn active" data-stock-tab="local">
+          <i data-lucide="image"></i>
+          <span>Bibliotheek (<span id="stockTabCount">133</span>)</span>
+        </button>
+        <button type="button" class="stock-tab-btn" data-stock-tab="online">
+          <i data-lucide="globe"></i>
+          <span>Online Zoeken</span>
+          <span class="badge-pill-subtle">Internet</span>
+        </button>
+      </div>
+
       <div class="modal-body stock-library-body">
-        <!-- Search Bar -->
-        <div class="stock-search-wrapper">
-          <div class="input-wrapper flex-1" style="position: relative;">
-            <i data-lucide="search"></i>
-            <input type="text" id="stockSearchInput" placeholder="Zoek een gerecht, ingrediënt of categorie..." autocomplete="off">
-            <button type="button" id="clearStockSearchBtn" class="btn-clear-search hidden" title="Zoekopdracht wissen">
-              <i data-lucide="x"></i>
+        <!-- LOCAL TAB VIEW -->
+        <div id="stockLocalView" class="stock-view-section">
+          <!-- Search Bar -->
+          <div class="stock-search-wrapper">
+            <div class="input-wrapper flex-1" style="position: relative;">
+              <i data-lucide="search"></i>
+              <input type="text" id="stockSearchInput" placeholder="Zoek een gerecht, ingrediënt of categorie..." autocomplete="off">
+              <button type="button" id="clearStockSearchBtn" class="btn-clear-search hidden" title="Zoekopdracht wissen">
+                <i data-lucide="x"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Category Filter Pills -->
+          <div class="stock-categories-scroll">
+            <div id="stockCategoriesContainer" class="stock-categories-chips">
+              <!-- Populated dynamically by JS -->
+            </div>
+          </div>
+
+          <!-- Local Image Grid -->
+          <div class="stock-grid-scroll">
+            <div id="stockImageGrid" class="stock-image-grid">
+              <!-- Populated dynamically by JS -->
+            </div>
+
+            <!-- Empty state for local -->
+            <div id="stockEmptyState" class="stock-empty-state hidden">
+              <i data-lucide="image-off" class="stock-empty-icon"></i>
+              <h4>Geen afbeeldingen gevonden</h4>
+              <p>Probeer een andere zoekterm of kies een andere categorie.</p>
+              <button type="button" id="resetStockFiltersBtn" class="btn btn-outline btn-sm">Reset alle filters</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ONLINE TAB VIEW -->
+        <div id="stockOnlineView" class="stock-view-section hidden">
+          <!-- Online Search Bar -->
+          <div class="stock-search-wrapper">
+            <div class="input-wrapper flex-1" style="position: relative;">
+              <i data-lucide="search"></i>
+              <input type="text" id="stockOnlineSearchInput" placeholder="Typ een gerecht, ingrediënt of keuken (bijv. 'carbonara', 'ramen', 'falafel')..." autocomplete="off">
+              <button type="button" id="clearStockOnlineSearchBtn" class="btn-clear-search hidden" title="Wissen">
+                <i data-lucide="x"></i>
+              </button>
+            </div>
+            <button type="button" id="executeOnlineSearchBtn" class="btn btn-primary">
+              <i data-lucide="search"></i>
+              <span>Zoeken</span>
             </button>
           </div>
-        </div>
 
-        <!-- Category Filter Pills -->
-        <div class="stock-categories-scroll">
-          <div id="stockCategoriesContainer" class="stock-categories-chips">
-            <!-- Populated dynamically by JS -->
+          <!-- Quick Suggestion Tags -->
+          <div class="stock-categories-scroll">
+            <div id="stockOnlineSuggestions" class="stock-categories-chips">
+              <button type="button" class="stock-category-chip online-tag-chip" data-online-query="Pasta Carbonara">Pasta Carbonara</button>
+              <button type="button" class="stock-category-chip online-tag-chip" data-online-query="Bolognese">Bolognese</button>
+              <button type="button" class="stock-category-chip online-tag-chip" data-online-query="Lasagne">Lasagne</button>
+              <button type="button" class="stock-category-chip online-tag-chip" data-online-query="Thaise Curry">Thaise Curry</button>
+              <button type="button" class="stock-category-chip online-tag-chip" data-online-query="Ramen">Ramen</button>
+              <button type="button" class="stock-category-chip online-tag-chip" data-online-query="Sushi">Sushi</button>
+              <button type="button" class="stock-category-chip online-tag-chip" data-online-query="Kipburger">Kipburger</button>
+              <button type="button" class="stock-category-chip online-tag-chip" data-online-query="Gegrilde Zalm">Gegrilde Zalm</button>
+              <button type="button" class="stock-category-chip online-tag-chip" data-online-query="Shakshuka">Shakshuka</button>
+              <button type="button" class="stock-category-chip online-tag-chip" data-online-query="Tacos">Tacos</button>
+              <button type="button" class="stock-category-chip online-tag-chip" data-online-query="Tiramisu">Tiramisu</button>
+              <button type="button" class="stock-category-chip online-tag-chip" data-online-query="Pannenkoeken">Pannenkoeken</button>
+            </div>
           </div>
-        </div>
 
-        <!-- Image Grid (scroll container) -->
-        <div class="stock-grid-scroll">
-          <div id="stockImageGrid" class="stock-image-grid">
-            <!-- Populated dynamically by JS -->
-          </div>
+          <!-- Online Image Grid -->
+          <div class="stock-grid-scroll">
+            <div id="stockOnlineImageGrid" class="stock-image-grid">
+              <!-- Populated dynamically by JS -->
+            </div>
 
-          <!-- Empty state -->
-          <div id="stockEmptyState" class="stock-empty-state hidden">
-            <i data-lucide="image-off" class="stock-empty-icon"></i>
-            <h4>Geen afbeeldingen gevonden</h4>
-            <p>Probeer een andere zoekterm of kies een andere categorie.</p>
-            <button type="button" id="resetStockFiltersBtn" class="btn btn-outline btn-sm">Reset alle filters</button>
+            <!-- Online Initial/Empty/Error states -->
+            <div id="stockOnlineInitialState" class="stock-empty-state">
+              <i data-lucide="globe" class="stock-empty-icon"></i>
+              <h4>Zoek online naar miljoenen gerechten</h4>
+              <p>Typ een zoekopdracht hierboven of klik op een van de suggesties om live foto's te zoeken.</p>
+            </div>
+
+            <div id="stockOnlineEmptyState" class="stock-empty-state hidden">
+              <i data-lucide="search-x" class="stock-empty-icon"></i>
+              <h4>Geen online foto's gevonden</h4>
+              <p>Probeer een algemenere zoekterm in het Nederlands of Engels (bijv. "pasta", "salad", "cake").</p>
+            </div>
+
+            <div id="stockOnlineErrorState" class="stock-empty-state hidden">
+              <i data-lucide="wifi-off" class="stock-empty-icon"></i>
+              <h4>Kon geen verbinding maken</h4>
+              <p>Controleer je internetverbinding en probeer het opnieuw.</p>
+              <button type="button" id="retryOnlineSearchBtn" class="btn btn-outline btn-sm">Opnieuw proberen</button>
+            </div>
           </div>
         </div>
       </div>
