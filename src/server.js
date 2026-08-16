@@ -86,7 +86,7 @@ app.use((err, _req, res, _next) => {
 // ── Start ─────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
-  console.log(` Receptenboekje running on port ${PORT} (${process.env.NODE_ENV || 'development'})`);
+  console.log(`Receptenboekje running on http://localhost:${PORT} (${process.env.NODE_ENV || 'development'})`);
 });
 
 module.exports = app;
