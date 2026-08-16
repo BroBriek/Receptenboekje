@@ -66,6 +66,11 @@
     const images = await ensureStockImagesLoaded();
     renderCategoryChips();
     renderStockGrid(images);
+
+    // Reset scroll to top after real grid replaces the skeleton placeholders.
+    // Without this the body stays scrolled down past the chips & search bar.
+    const body = modal.querySelector('.stock-library-body');
+    if (body) body.scrollTop = 0;
   }
 
   // Render Category Filter Chips

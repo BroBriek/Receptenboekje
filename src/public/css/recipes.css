@@ -884,16 +884,19 @@
 }
 
 .stock-modal-content {
-  max-width: 900px;
-  width: 95vw;
+  /* Width is controlled by the dialog element (.stock-modal-dialog);
+     do not set width/max-width here to avoid overflow past the dialog bounds. */
 }
 
 .stock-library-body {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  max-height: 75vh;
-  overflow-y: auto;
+  /* Use flex:1 + min-height:0 so the body fills available space without
+     overflowing — the image grid handles its own scrolling */
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
   padding: 1.25rem 1.5rem;
 }
 
@@ -901,6 +904,7 @@
   display: flex;
   gap: 0.5rem;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .btn-clear-search {
@@ -925,9 +929,12 @@
 
 .stock-categories-scroll {
   overflow-x: auto;
-  padding-bottom: 0.5rem;
+  /* overflow-x: auto implicitly sets overflow-y: auto per CSS spec, which
+     clips children. Add padding-top so chip borders aren't cut off at the top. */
+  padding: 2px 0 0.5rem;
   margin-bottom: 0.25rem;
   scrollbar-width: thin;
+  flex-shrink: 0;
 }
 
 .stock-categories-chips {
@@ -974,10 +981,18 @@
   color: var(--white);
 }
 
+.stock-grid-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
 .stock-image-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 1rem;
+  align-content: start;
 }
 
 .stock-card {
