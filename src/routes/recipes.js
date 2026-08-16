@@ -25,9 +25,9 @@ function deleteImage(filename) {
   }
 }
 
-// GET /api/recipes - List recipes with search and tags filters (shared cookbook)
+// GET /api/recipes - List recipes with search, tags, and ingredients filters (shared cookbook)
 router.get('/', requireAuth, (req, res) => {
-  const { q, tags } = req.query;
+  const { q, tags, ingredients, match_mode } = req.query;
 
   try {
     let sql = `
@@ -54,7 +54,40 @@ router.get('/', requireAuth, (req, res) => {
       }
     }
 
-    sql += ' ORDER BY r.created_at DESC';
+    let ingredientIds = [];
+    if (ingredients) {
+      ingredientIds = ingredients.split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id));
+      if (ingredientIds.length > 0) {
+        if (match_mode === 'all') {
+          sql += ` AND r.id IN (
+            SELECT recipe_id FROM recipe_ingredients 
+            WHERE ingredient_id IN (${ingredientIds.map(() => '?').join(',')})
+            GROUP BY recipe_id
+            HAVING COUNT(DISTINCT ingredient_id) = ?
+          )`;
+          params.push(...ingredientIds, ingredientIds.length);
+        } else {
+          // Default: match any of the selected ingredients
+          sql += ` AND r.id IN (
+            SELECT recipe_id FROM recipe_ingredients 
+            WHERE ingredient_id IN (${ingredientIds.map(() => '?').join(',')})
+          )`;
+          params.push(...ingredientIds);
+        }
+      }
+    }
+
+    if (ingredientIds.length > 0 && match_mode !== 'all') {
+      // Sort recipes by highest number of matching selected ingredients first, then newest
+      sql += ` ORDER BY (
+        SELECT COUNT(DISTINCT ri.ingredient_id) 
+        FROM recipe_ingredients ri 
+        WHERE ri.recipe_id = r.id AND ri.ingredient_id IN (${ingredientIds.map(() => '?').join(',')})
+      ) DESC, r.created_at DESC`;
+      params.push(...ingredientIds);
+    } else {
+      sql += ' ORDER BY r.created_at DESC';
+    }
 
     const recipes = db.prepare(sql).all(...params);
 
@@ -69,7 +102,7 @@ router.get('/', requireAuth, (req, res) => {
       `).all(recipe.id);
 
       recipe.ingredients = db.prepare(`
-        SELECT ri.id, i.name, ri.quantity, ri.unit, ri.notes
+        SELECT ri.id, i.id AS ingredient_id, i.name, ri.quantity, ri.unit, ri.notes
         FROM recipe_ingredients ri
         JOIN ingredients i ON ri.ingredient_id = i.id
         WHERE ri.recipe_id = ?

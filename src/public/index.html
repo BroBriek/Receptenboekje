@@ -454,8 +454,8 @@
               <i data-lucide="apple"></i>
             </div>
             <div class="more-card-content">
-              <h3>Ingrediënten Bibliotheek</h3>
-              <p>Bekijk alle gebruikte ingrediënten op alfabetische volgorde.</p>
+              <h3>Ingrediënten &amp; Receptenzoeker</h3>
+              <p>Selecteer ingrediënten en ontdek direct welke recepten je ermee kunt maken.</p>
             </div>
             <i data-lucide="chevron-right" class="more-card-arrow"></i>
           </div>
@@ -616,17 +616,23 @@
         <div class="section-header">
           <div>
             <h2>Ingrediënten Bibliotheek</h2>
-            <p class="section-subtitle">Overzicht van alle ingrediënten in het receptenboek</p>
+            <p class="section-subtitle">Selecteer ingrediënten om bijpassende recepten te vinden</p>
           </div>
           <button id="backToMoreFromIngBtn" class="btn btn-outline">
             <i data-lucide="arrow-left"></i> Terug
           </button>
         </div>
 
+        <!-- Ingredients Browser Library -->
         <div class="ingredients-browser-card">
-          <div class="search-bar">
-            <i data-lucide="search" class="search-icon"></i>
-            <input type="text" id="ingredientSearchInput" placeholder="Zoek een ingrediënt...">
+          <div class="ingredients-browser-topbar">
+            <div class="search-bar" style="flex: 1;">
+              <i data-lucide="search" class="search-icon"></i>
+              <input type="text" id="ingredientSearchInput" placeholder="Zoek een ingrediënt...">
+              <button type="button" id="clearIngredientSearchBtn" class="search-clear-btn hidden" title="Wis zoekbalk">
+                <i data-lucide="x"></i>
+              </button>
+            </div>
           </div>
 
           <div id="alphabetNav" class="alphabet-nav"></div>
@@ -634,6 +640,90 @@
           <div id="ingredientsLetterGroups" class="ingredients-groups">
             <!-- Alphabetically grouped ingredients -->
           </div>
+        </div>
+
+        <!-- Modern Floating Bottom Action Bar (Themed) -->
+        <div id="ingredientFloatingBar" class="ingredient-floating-bar hidden">
+          <div class="floating-bar-content">
+            <div class="floating-bar-info">
+              <div class="floating-badge-icon">
+                <i data-lucide="chef-hat"></i>
+              </div>
+              <div class="floating-text-block">
+                <span id="floatingSelectedCount" class="floating-sel-count">0 ingrediënten gekozen</span>
+                <span id="floatingMatchCount" class="floating-match-badge">0 recepten gevonden</span>
+              </div>
+            </div>
+            <div class="floating-bar-actions">
+              <button type="button" id="floatingClearBtn" class="floating-btn-clear" title="Wis alle geselecteerde ingrediënten">
+                <i data-lucide="rotate-ccw"></i> Wis
+              </button>
+              <button type="button" id="floatingViewRecipesBtn" class="btn btn-primary btn-sm floating-view-btn" title="Bekijk bijpassende recepten">
+                <span>Bekijk recepten</span>
+                <i data-lucide="arrow-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── VIEW 7B: INGREDIENT MATCHING RESULTS (SEPARATE LIST) ── -->
+      <section id="viewIngredientResults" class="view-section hidden">
+        <div class="section-header">
+          <div>
+            <h2>Bijpassende Recepten</h2>
+            <p class="section-subtitle">Recepten gerangschikt op het aantal matchende ingrediënten</p>
+          </div>
+          <button id="backToIngredientsFromResultsBtn" class="btn btn-outline">
+            <i data-lucide="arrow-left"></i> Ingrediënten aanpassen
+          </button>
+        </div>
+
+        <!-- Active Filter & Selected Ingredients Summary Card -->
+        <div class="results-summary-card">
+          <div class="results-summary-top">
+            <div class="results-summary-info">
+              <div class="results-badge-wrap">
+                <i data-lucide="utensils" class="results-utensils-icon"></i>
+                <span class="results-badge-count" id="resultsFoundBadge">0 recepten gevonden</span>
+              </div>
+              <div class="match-mode-selector">
+                <span class="match-mode-label">Filter:</span>
+                <div class="segmented-control">
+                  <button type="button" class="segment-btn active" data-mode="any" id="resultsMatchModeAnyBtn" title="Toon recepten met minstens 1 van de geselecteerde ingrediënten">
+                    <i data-lucide="layers" class="segment-icon"></i> Minstens 1 match
+                  </button>
+                  <button type="button" class="segment-btn" data-mode="all" id="resultsMatchModeAllBtn" title="Toon uitsluitend recepten die alle geselecteerde ingrediënten bevatten">
+                    <i data-lucide="check-check" class="segment-icon"></i> Alle geselecteerd
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="results-summary-actions">
+              <button type="button" id="resultsClearSelectionBtn" class="btn btn-sm btn-outline-danger" title="Wis alle geselecteerde ingrediënten">
+                <i data-lucide="trash-2"></i> Wis selectie
+              </button>
+            </div>
+          </div>
+
+          <!-- Active Selected Ingredient Chips -->
+          <div class="results-chips-container">
+            <span class="results-chips-label">Geselecteerd:</span>
+            <div id="resultsIngredientChips" class="selected-chips-container">
+              <!-- Chips injected dynamically -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="resultsRecipesLoading" class="matching-recipes-loading hidden">
+          <div class="matching-spinner"></div>
+          <span>Recepten zoeken...</span>
+        </div>
+
+        <!-- Results Recipes Grid -->
+        <div id="resultsRecipesGrid" class="recipes-grid matching-recipes-grid">
+          <!-- Dynamic recipe cards rendered here -->
         </div>
       </section>
 
