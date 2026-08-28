@@ -73,11 +73,8 @@ The server will be available at **http://localhost:8080**.
 The database (`./data/`) and uploaded images (`./uploads/`) are mounted as **bind volumes** so they survive container rebuilds.
 
 ```bash
-# Build and start
+# Build and start in detached mode
 docker compose up -d --build
-
-# Rebuild image without losing data
-docker compose up -d --build   # data & uploads are untouched
 
 # View logs
 docker compose logs -f
@@ -85,6 +82,24 @@ docker compose logs -f
 # Stop
 docker compose down
 ```
+
+### Automatic Startup on Server Boot
+The container is configured with `restart: unless-stopped`. Ensure Docker itself is set to run on system boot:
+```bash
+sudo systemctl enable docker
+```
+Once started with `docker compose up -d`, the container will automatically start whenever the server reboots.
+
+### Updating the Application
+
+- **Soft Update** (pulls repository and rebuilds using Docker cache):
+  ```bash
+  ./softupdate.sh
+  ```
+- **Full Update** (pulls repository and rebuilds from scratch using `--no-cache`):
+  ```bash
+  ./update.sh
+  ```
 
 > Set a secure `SESSION_SECRET` in your environment or a `.env` file before deploying to production.
 
