@@ -335,24 +335,20 @@
 .cooking-step-pills {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 0.45rem;
   overflow-x: auto;
   overflow-y: hidden;
   flex-wrap: nowrap;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
-  padding: 0.25rem 0.15rem;
+  padding: 0.25rem 0.5rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .cooking-step-pills::-webkit-scrollbar {
   display: none;
-}
-
-@media (min-width: 640px) {
-  .cooking-step-pills {
-    justify-content: center;
-  }
 }
 
 .cooking-step-pill {
@@ -565,6 +561,17 @@
   padding: 1.25rem 1.5rem;
   margin-top: 0.5rem;
   box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+/* Subtle, unobtrusive styling when step has no default timer */
+.cooking-timers-section.empty {
+  background: transparent;
+  border: 1px dashed var(--border, #e5e0d8);
+  border-radius: var(--radius-md, 12px);
+  padding: 0.45rem 0.85rem;
+  margin-top: 0.5rem;
+  gap: 0;
 }
 
 .cooking-timer-card {
@@ -834,6 +841,76 @@
   color: var(--primary, #e07a5f);
 }
 
+/* Subtle inline timer bar when no timer is active/configured */
+.cooking-subtle-timer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.cooking-subtle-timer-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-muted, #7c7e8e);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.cooking-subtle-timer-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted, #7c7e8e);
+  flex-shrink: 0;
+}
+
+.cooking-subtle-timer-presets {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.cooking-subtle-chip {
+  background-color: var(--bg-color, #faf8f5);
+  border: 1px solid var(--border, #e5e0d8);
+  color: var(--text-dark, #2b2d42);
+  border-radius: var(--radius-pill, 9999px);
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 0.22rem 0.55rem;
+  min-height: 26px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.cooking-subtle-chip:hover {
+  background-color: var(--primary-light, #fde8e3);
+  border-color: var(--primary, #e07a5f);
+  color: var(--primary, #e07a5f);
+  transform: translateY(-1px);
+}
+
+.cooking-subtle-chip-custom {
+  background-color: var(--white, #fff);
+  color: var(--primary, #e07a5f);
+  border-color: rgba(224, 122, 95, 0.4);
+}
+
+.cooking-subtle-chip-custom:hover {
+  background-color: var(--primary, #e07a5f);
+  color: #fff;
+  border-color: var(--primary, #e07a5f);
+}
+
 /* Mobile Timer Layout Optimizations */
 @media (max-width: 640px) {
   .cooking-timers-section {
@@ -891,15 +968,28 @@
     height: 38px;
   }
 
-  .cooking-custom-timer-presets {
+  .cooking-custom-timer-presets::-webkit-scrollbar {
+    display: none;
+  }
+
+  .cooking-timers-section.empty {
+    padding: 0.4rem 0.65rem;
+  }
+
+  .cooking-subtle-timer-bar {
+    justify-content: flex-start;
+    gap: 0.4rem;
+  }
+
+  .cooking-subtle-timer-presets {
     overflow-x: auto;
     flex-wrap: nowrap;
     scrollbar-width: none;
-    padding-bottom: 2px;
     width: 100%;
+    padding-bottom: 2px;
   }
 
-  .cooking-custom-timer-presets::-webkit-scrollbar {
+  .cooking-subtle-timer-presets::-webkit-scrollbar {
     display: none;
   }
 }
@@ -1537,5 +1627,272 @@
     width: 100%;
     margin-left: 0;
     justify-content: center;
+  }
+}
+
+/* ── COOKING CUSTOM TIMER MODAL ─────────────────────────────────────────── */
+.cooking-custom-timer-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(43, 45, 66, 0.55);
+  backdrop-filter: blur(4px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  box-sizing: border-box;
+  animation: timerModalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cooking-custom-timer-modal-overlay.hidden {
+  display: none !important;
+}
+
+@keyframes timerModalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.cooking-custom-timer-modal {
+  background-color: var(--white, #ffffff);
+  border-radius: var(--radius-lg, 20px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+  border: 1px solid var(--border, #e5e0d8);
+  max-width: 440px;
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: timerModalScaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes timerModalScaleIn {
+  from { opacity: 0; transform: scale(0.92) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.cooking-custom-timer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 1.35rem;
+  border-bottom: 1px solid var(--border, #e5e0d8);
+  background-color: var(--bg-color, #faf8f5);
+}
+
+.cooking-custom-timer-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cooking-custom-timer-icon-badge {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background-color: var(--primary-light, #fde8e3);
+  color: var(--primary, #e07a5f);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cooking-custom-timer-icon-badge svg,
+.cooking-custom-timer-icon-badge i {
+  width: 20px;
+  height: 20px;
+}
+
+.cooking-custom-timer-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-dark, #2b2d42);
+}
+
+.cooking-custom-timer-subtitle {
+  font-size: 0.78rem;
+  color: var(--text-muted, #7c7e8e);
+  margin: 0;
+  font-weight: 500;
+}
+
+.cooking-custom-timer-body {
+  padding: 1.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin: 0;
+}
+
+/* Stepper Time Picker */
+.cooking-timer-picker-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: var(--bg-color, #faf8f5);
+  border: 1px solid var(--border, #e5e0d8);
+  border-radius: var(--radius-md, 14px);
+  padding: 1rem 0.75rem;
+}
+
+.cooking-time-input-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.cooking-time-input-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #7c7e8e);
+}
+
+.cooking-time-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--white, #fff);
+  border: 1.5px solid var(--border, #e5e0d8);
+  border-radius: var(--radius-pill, 9999px);
+  padding: 0.25rem 0.4rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cooking-time-stepper:focus-within {
+  border-color: var(--primary, #e07a5f);
+  box-shadow: 0 0 0 3px rgba(224, 122, 95, 0.15);
+}
+
+.cooking-stepper-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: var(--bg-color, #faf8f5);
+  color: var(--text-dark, #2b2d42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.cooking-stepper-btn:hover {
+  background: var(--primary, #e07a5f);
+  color: #fff;
+  transform: scale(1.08);
+}
+
+.cooking-stepper-btn i,
+.cooking-stepper-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.cooking-time-number-input {
+  width: 52px;
+  text-align: center;
+  font-size: 1.6rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  font-family: inherit;
+  border: none;
+  background: transparent;
+  color: var(--text-dark, #2b2d42);
+  outline: none;
+  padding: 0;
+}
+
+.cooking-time-number-input::-webkit-outer-spin-button,
+.cooking-time-number-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.cooking-time-number-input[type=number] {
+  -moz-appearance: textfield;
+}
+
+.cooking-time-separator {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--text-muted, #7c7e8e);
+  margin-top: 1.2rem;
+}
+
+/* Modal Preset Grid */
+.cooking-modal-presets-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.cooking-modal-presets-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted, #7c7e8e);
+}
+
+.cooking-modal-presets {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.4rem;
+}
+
+.cooking-modal-preset-btn {
+  background: var(--white, #fff);
+  border: 1px solid var(--border, #e5e0d8);
+  border-radius: var(--radius-pill, 9999px);
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-dark, #2b2d42);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+  font-family: inherit;
+}
+
+.cooking-modal-preset-btn:hover {
+  border-color: var(--primary, #e07a5f);
+  background-color: var(--primary-light, #fde8e3);
+  color: var(--primary, #e07a5f);
+}
+
+.cooking-modal-preset-btn.active {
+  background-color: var(--primary, #e07a5f);
+  border-color: var(--primary, #e07a5f);
+  color: #fff;
+}
+
+.cooking-custom-timer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border, #e5e0d8);
+}
+
+.btn-start-custom-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.65rem 1.35rem;
+  font-weight: 700;
+}
+
+@media (max-width: 480px) {
+  .cooking-modal-presets {
+    grid-template-columns: repeat(3, 1fr);
   }
 }

@@ -1602,6 +1602,90 @@
       </div>
     </aside>
 
+    <!-- Custom Timer Modal (inside cooking overlay for fullscreen compatibility) -->
+    <div id="cookingCustomTimerModal" class="cooking-custom-timer-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="cookingCustomTimerTitle">
+      <div class="cooking-custom-timer-modal">
+        <div class="cooking-custom-timer-header">
+          <div class="cooking-custom-timer-title-wrap">
+            <div class="cooking-custom-timer-icon-badge">
+              <i data-lucide="timer"></i>
+            </div>
+            <div>
+              <h3 id="cookingCustomTimerTitle" class="cooking-custom-timer-title">Kookwekker instellen</h3>
+              <p id="cookingCustomTimerSubtitle" class="cooking-custom-timer-subtitle">Voor huidige stap</p>
+            </div>
+          </div>
+          <button type="button" id="cookingCustomTimerCloseBtn" class="btn-close" aria-label="Sluiten">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+
+        <form id="cookingCustomTimerForm" class="cooking-custom-timer-body">
+          <!-- Time input with stepper controls -->
+          <div class="cooking-timer-picker-group">
+            <div class="cooking-time-input-col">
+              <label for="cookingCustomTimerMinutes" class="cooking-time-input-label">Minuten</label>
+              <div class="cooking-time-stepper">
+                <button type="button" class="cooking-stepper-btn" data-timer-step-min="-1" aria-label="1 minuut minder">
+                  <i data-lucide="minus"></i>
+                </button>
+                <input type="number" id="cookingCustomTimerMinutes" class="cooking-time-number-input" min="0" max="180" value="5" step="1" required>
+                <button type="button" class="cooking-stepper-btn" data-timer-step-min="1" aria-label="1 minuut meer">
+                  <i data-lucide="plus"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="cooking-time-separator">:</div>
+
+            <div class="cooking-time-input-col">
+              <label for="cookingCustomTimerSeconds" class="cooking-time-input-label">Seconden</label>
+              <div class="cooking-time-stepper">
+                <button type="button" class="cooking-stepper-btn" data-timer-step-sec="-15" aria-label="15 seconden minder">
+                  <i data-lucide="minus"></i>
+                </button>
+                <input type="number" id="cookingCustomTimerSeconds" class="cooking-time-number-input" min="0" max="59" value="0" step="5" required>
+                <button type="button" class="cooking-stepper-btn" data-timer-step-sec="15" aria-label="15 seconden meer">
+                  <i data-lucide="plus"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick-select Preset Chips -->
+          <div class="cooking-modal-presets-wrap">
+            <span class="cooking-modal-presets-label">Snelle keuzes:</span>
+            <div class="cooking-modal-presets">
+              <button type="button" class="cooking-modal-preset-btn" data-set-timer-min="1">1 min</button>
+              <button type="button" class="cooking-modal-preset-btn" data-set-timer-min="2">2 min</button>
+              <button type="button" class="cooking-modal-preset-btn" data-set-timer-min="3">3 min</button>
+              <button type="button" class="cooking-modal-preset-btn" data-set-timer-min="5">5 min</button>
+              <button type="button" class="cooking-modal-preset-btn" data-set-timer-min="8">8 min</button>
+              <button type="button" class="cooking-modal-preset-btn" data-set-timer-min="10">10 min</button>
+              <button type="button" class="cooking-modal-preset-btn" data-set-timer-min="15">15 min</button>
+              <button type="button" class="cooking-modal-preset-btn" data-set-timer-min="20">20 min</button>
+              <button type="button" class="cooking-modal-preset-btn" data-set-timer-min="30">30 min</button>
+              <button type="button" class="cooking-modal-preset-btn" data-set-timer-min="45">45 min</button>
+              <button type="button" class="cooking-modal-preset-btn" data-set-timer-min="60">60 min</button>
+            </div>
+          </div>
+
+          <!-- Optional Timer Label -->
+          <div class="form-group" style="margin-bottom: 0;">
+            <label for="cookingCustomTimerLabel" class="form-label" style="font-size: 0.85rem;">Naam / omschrijving (optioneel)</label>
+            <input type="text" id="cookingCustomTimerLabel" class="form-input" placeholder="bv. Pasta koken, Eieren koken, Sudderen..." maxlength="40">
+          </div>
+
+          <div class="cooking-custom-timer-footer">
+            <button type="button" id="cookingCustomTimerCancelBtn" class="btn btn-outline">Annuleren</button>
+            <button type="submit" class="btn btn-primary btn-start-custom-timer">
+              <i data-lucide="play"></i> Start Kookwekker
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- Bottom Navigation Controls -->
     <footer class="cooking-footer">
       <button type="button" id="cookingPrevBtn" class="btn-cooking-nav btn-cooking-prev" disabled>

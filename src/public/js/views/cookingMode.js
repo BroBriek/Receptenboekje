@@ -184,8 +184,9 @@
     if (overlay) overlay.classList.add('hidden');
     document.body.style.overflow = '';
 
-    // Close ingredients drawer
+    // Close ingredients drawer & custom timer modal
     toggleIngredientsDrawer(false);
+    closeCustomTimerModal();
   }
 
   // ── Render Step & Navigation ──
@@ -315,17 +316,23 @@
     activeTimersList.push(...customTimersForStep);
 
     if (activeTimersList.length === 0) {
-      // Step has no timers: show quick-add timer bar
+      // Step has no timers: show subtle, compact quick-add timer bar
+      timersContainer.className = 'cooking-timers-section empty';
       timersContainer.innerHTML = `
-        <div class="cooking-custom-timer-bar" style="border-top: none; padding-top: 0;">
-          <span class="cooking-custom-timer-label"><i data-lucide="timer" style="width:14px;height:14px;vertical-align:-2px;"></i> Kookwekker toevoegen voor deze stap:</span>
-          <div class="cooking-custom-timer-presets">
-            <button type="button" class="cooking-preset-chip" data-add-preset-timer="60">+ 1 min</button>
-            <button type="button" class="cooking-preset-chip" data-add-preset-timer="180">+ 3 min</button>
-            <button type="button" class="cooking-preset-chip" data-add-preset-timer="300">+ 5 min</button>
-            <button type="button" class="cooking-preset-chip" data-add-preset-timer="600">+ 10 min</button>
-            <button type="button" class="cooking-preset-chip" data-add-preset-timer="900">+ 15 min</button>
-            <button type="button" class="cooking-preset-chip" data-add-custom-timer="true">+ Aangepast</button>
+        <div class="cooking-subtle-timer-bar">
+          <div class="cooking-subtle-timer-left">
+            <i data-lucide="timer" class="cooking-subtle-timer-icon"></i>
+            <span class="cooking-subtle-timer-label">Optionele kookwekker:</span>
+          </div>
+          <div class="cooking-subtle-timer-presets">
+            <button type="button" class="cooking-subtle-chip" data-add-preset-timer="60">+1m</button>
+            <button type="button" class="cooking-subtle-chip" data-add-preset-timer="180">+3m</button>
+            <button type="button" class="cooking-subtle-chip" data-add-preset-timer="300">+5m</button>
+            <button type="button" class="cooking-subtle-chip" data-add-preset-timer="600">+10m</button>
+            <button type="button" class="cooking-subtle-chip" data-add-preset-timer="900">+15m</button>
+            <button type="button" class="cooking-subtle-chip cooking-subtle-chip-custom" data-add-custom-timer="true">
+              <i data-lucide="plus" style="width:12px;height:12px;display:inline-block;vertical-align:-1px;"></i> Aangepast
+            </button>
           </div>
         </div>
       `;
@@ -334,6 +341,7 @@
       return;
     }
 
+    timersContainer.className = 'cooking-timers-section';
     timersContainer.classList.remove('hidden');
 
     let timersHtml = activeTimersList.map(timer => {
@@ -732,6 +740,52 @@
     draw();
   }
 
+  // ── Custom Timer Modal (Sleek In-Cooking Dialog) ──
+  function openCustomTimerModal(defaultMinutes = 5) {
+    const modal = document.getElementById('cookingCustomTimerModal');
+    if (!modal) return;
+
+    const subtitleEl = document.getElementById('cookingCustomTimerSubtitle');
+    const minInput = document.getElementById('cookingCustomTimerMinutes');
+    const secInput = document.getElementById('cookingCustomTimerSeconds');
+    const labelInput = document.getElementById('cookingCustomTimerLabel');
+
+    if (subtitleEl) {
+      const stepNum = session.currentStepIndex + 1;
+      const recTitle = session.recipe?.title ? ` (${session.recipe.title})` : '';
+      subtitleEl.textContent = `Voor stap ${stepNum}${recTitle}`;
+    }
+
+    if (minInput) minInput.value = defaultMinutes;
+    if (secInput) secInput.value = 0;
+    if (labelInput) {
+      labelInput.value = '';
+      labelInput.placeholder = `bv. Stap ${session.currentStepIndex + 1} timer`;
+    }
+
+    // Reset preset active states
+    modal.querySelectorAll('.cooking-modal-preset-btn').forEach(btn => {
+      const min = parseInt(btn.getAttribute('data-set-timer-min'), 10);
+      btn.classList.toggle('active', min === defaultMinutes);
+    });
+
+    modal.classList.remove('hidden');
+    if (window.lucide) lucide.createIcons();
+
+    // Auto-focus & select minute input for fast editing
+    setTimeout(() => {
+      if (minInput) {
+        minInput.focus();
+        minInput.select();
+      }
+    }, 50);
+  }
+
+  function closeCustomTimerModal() {
+    const modal = document.getElementById('cookingCustomTimerModal');
+    if (modal) modal.classList.add('hidden');
+  }
+
   // ── Toggle Fullscreen ──
   function toggleFullscreen() {
     const overlay = document.getElementById('cookingModeOverlay');
@@ -751,6 +805,50 @@
   // ── Event Delegation & Setup ──
   const overlay = document.getElementById('cookingModeOverlay');
   if (overlay) {
+    // Form submission for custom timer
+    const timerForm = document.getElementById('cookingCustomTimerForm');
+    if (timerForm) {
+      timerForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const minInput = document.getElementById('cookingCustomTimerMinutes');
+        const secInput = document.getElementById('cookingCustomTimerSeconds');
+        const labelInput = document.getElementById('cookingCustomTimerLabel');
+
+        const min = parseInt(minInput?.value, 10) || 0;
+        const sec = parseInt(secInput?.value, 10) || 0;
+        const totalSec = Math.max(0, min * 60 + sec);
+
+        if (totalSec <= 0) {
+          App.showToast('Kies minimaal 1 seconde voor de wekker.', 'error');
+          return;
+        }
+
+        let label = labelInput?.value.trim();
+        if (!label) {
+          const timeParts = [];
+          if (min > 0) timeParts.push(`${min} min`);
+          if (sec > 0) timeParts.push(`${sec} sec`);
+          label = `Timer (${timeParts.join(' ')})`;
+        }
+
+        const customId = `custom_${session.currentStepIndex}_${Date.now()}`;
+        session.timers.set(customId, {
+          id: customId,
+          stepIndex: session.currentStepIndex,
+          totalSec: totalSec,
+          remainingSec: totalSec,
+          isRunning: true,
+          intervalId: null,
+          label: label,
+          isFinished: false
+        });
+
+        closeCustomTimerModal();
+        startTimer(customId);
+        App.showToast(`⏱️ Kookwekker gestart: ${label}`, 'success');
+      });
+    }
+
     overlay.addEventListener('click', (e) => {
       // 1. Close cooking mode
       if (e.target.closest('#cookingCloseBtn') || e.target.closest('#cookingFinishReturnBtn')) {
@@ -859,7 +957,7 @@
         return;
       }
 
-      // 10. Add Preset Timer
+      // 10. Add Preset Timer Chip
       const presetBtn = e.target.closest('[data-add-preset-timer]');
       if (presetBtn) {
         const sec = parseInt(presetBtn.getAttribute('data-add-preset-timer'), 10) || 300;
@@ -878,32 +976,61 @@
         return;
       }
 
-      // 11. Add Custom Timer Prompt
+      // 11. Open Custom Timer Modal
       const customTimerBtn = e.target.closest('[data-add-custom-timer]');
       if (customTimerBtn) {
-        const inputMinutes = prompt('Hoeveel minuten wil je instellen voor de kookwekker?', '10');
-        if (inputMinutes) {
-          const min = parseFloat(inputMinutes.replace(',', '.'));
-          if (!isNaN(min) && min > 0) {
-            const sec = Math.round(min * 60);
-            const customId = `custom_${session.currentStepIndex}_${Date.now()}`;
-            session.timers.set(customId, {
-              id: customId,
-              stepIndex: session.currentStepIndex,
-              totalSec: sec,
-              remainingSec: sec,
-              isRunning: true,
-              intervalId: null,
-              label: `Timer (${min} min)`,
-              isFinished: false
-            });
-            startTimer(customId);
-          }
+        openCustomTimerModal(5);
+        return;
+      }
+
+      // 12. Custom Timer Modal Controls (Close, Cancel, Backdrop, Presets, Steppers)
+      if (e.target.closest('#cookingCustomTimerCloseBtn') || e.target.closest('#cookingCustomTimerCancelBtn') || e.target.id === 'cookingCustomTimerModal') {
+        closeCustomTimerModal();
+        return;
+      }
+
+      const modalPresetBtn = e.target.closest('[data-set-timer-min]');
+      if (modalPresetBtn) {
+        const min = parseInt(modalPresetBtn.getAttribute('data-set-timer-min'), 10) || 5;
+        const minInput = document.getElementById('cookingCustomTimerMinutes');
+        const secInput = document.getElementById('cookingCustomTimerSeconds');
+        if (minInput) minInput.value = min;
+        if (secInput) secInput.value = 0;
+
+        const modal = document.getElementById('cookingCustomTimerModal');
+        if (modal) {
+          modal.querySelectorAll('.cooking-modal-preset-btn').forEach(b => b.classList.remove('active'));
+          modalPresetBtn.classList.add('active');
         }
         return;
       }
 
-      // 12. Toggle ingredient item in drawer
+      const stepMinBtn = e.target.closest('[data-timer-step-min]');
+      if (stepMinBtn) {
+        const delta = parseInt(stepMinBtn.getAttribute('data-timer-step-min'), 10) || 0;
+        const minInput = document.getElementById('cookingCustomTimerMinutes');
+        if (minInput) {
+          const current = parseInt(minInput.value, 10) || 0;
+          minInput.value = Math.max(0, Math.min(180, current + delta));
+        }
+        return;
+      }
+
+      const stepSecBtn = e.target.closest('[data-timer-step-sec]');
+      if (stepSecBtn) {
+        const delta = parseInt(stepSecBtn.getAttribute('data-timer-step-sec'), 10) || 0;
+        const secInput = document.getElementById('cookingCustomTimerSeconds');
+        if (secInput) {
+          let current = parseInt(secInput.value, 10) || 0;
+          current += delta;
+          if (current < 0) current = 45;
+          if (current > 59) current = 0;
+          secInput.value = current;
+        }
+        return;
+      }
+
+      // 13. Toggle ingredient item in drawer
       const ingItem = e.target.closest('[data-toggle-ingredient]');
       if (ingItem) {
         const idx = parseInt(ingItem.getAttribute('data-toggle-ingredient'), 10);
@@ -970,6 +1097,25 @@
     const overlay = document.getElementById('cookingModeOverlay');
     if (!overlay || overlay.classList.contains('hidden')) return;
 
+    // If Custom Timer modal is open, handle its keys
+    const customModal = document.getElementById('cookingCustomTimerModal');
+    const isCustomModalOpen = customModal && !customModal.classList.contains('hidden');
+
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      if (isCustomModalOpen) {
+        closeCustomTimerModal();
+        return;
+      }
+      closeCookingMode();
+      return;
+    }
+
+    if (isCustomModalOpen) {
+      // Don't navigate steps with arrows/space while custom timer modal is open
+      return;
+    }
+
     if (e.key === 'ArrowRight' || e.key === 'PageDown') {
       e.preventDefault();
       if (session.currentStepIndex < session.recipe.steps.length - 1) {
@@ -983,9 +1129,6 @@
       if (session.currentStepIndex > 0) {
         renderCookingStep(session.currentStepIndex - 1);
       }
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      closeCookingMode();
     } else if (e.key === ' ' && !e.target.matches('input, textarea, button')) {
       e.preventDefault();
       // Space toggles current step timer or advances step
