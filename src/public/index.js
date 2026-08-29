@@ -284,7 +284,7 @@ const monthNamesDutch = [
 
 function formatLastPlannedRelative(lastPlannedDateStr) {
   if (!lastPlannedDateStr) {
-    return { text: '✨ Nog nooit gepland', isNever: true };
+    return { text: 'Nog nooit gepland', isNever: true };
   }
 
   const [y, m, d] = lastPlannedDateStr.split('-').map(Number);

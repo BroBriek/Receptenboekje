@@ -19,6 +19,8 @@ dialog.modal {
   overflow: hidden;
   box-sizing: border-box;
   z-index: 1000;
+  overscroll-behavior: contain;
+  touch-action: manipulation;
 }
 
 dialog.modal-dialog:not([open]),
@@ -43,6 +45,8 @@ dialog.modal-lg {
 .modal::backdrop {
   background-color: rgba(61, 64, 91, 0.45);
   backdrop-filter: blur(4px);
+  touch-action: none;
+  overscroll-behavior: none;
 }
 
 .modal-form,
@@ -96,6 +100,8 @@ dialog.modal-lg {
   min-height: 0;
   -webkit-overflow-scrolling: touch;
   box-sizing: border-box;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 .modal-intro {
@@ -297,6 +303,7 @@ dialog.modal-lg {
   gap: 0.4rem;
   max-height: 200px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: 0.4rem;
