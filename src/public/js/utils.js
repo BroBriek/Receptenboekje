@@ -132,6 +132,14 @@
     return val.toFixed(2).replace(/\.?0+$/, '');
   }
 
+  // Format ingredient and tag names: lowercase everything, then capitalize first letter (e.g. 'pApRiKa' -> 'Paprika')
+  function formatItemName(str) {
+    if (!str || typeof str !== 'string') return '';
+    const trimmed = str.trim();
+    if (!trimmed) return '';
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+  }
+
   // Expose on App
   App.getTodayDateString = getTodayDateString;
   App.formatDutchDate = formatDutchDate;
@@ -142,5 +150,6 @@
   App.escapeHtml = escapeHtml;
   App.escapeQuotes = escapeQuotes;
   App.formatQuantity = formatQuantity;
+  App.formatItemName = formatItemName;
 
 })(window.App);

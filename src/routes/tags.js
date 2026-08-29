@@ -39,21 +39,23 @@ router.get('/', (req, res) => {
 router.post('/', requireAuth, (req, res) => {
   const { name } = req.body;
 
-  if (!name || !name.trim()) {
+  const raw = typeof name === 'string' ? name.trim() : '';
+  if (!raw) {
     return res.status(400).json({ error: 'Tag naam is verplicht.' });
   }
 
-  const trimmed = name.trim();
+  // Format: lowercase all characters, then capitalize the first letter
+  const formattedName = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
 
   try {
     // Check if tag already exists (case-insensitive)
-    const existing = db.prepare('SELECT * FROM tags WHERE LOWER(name) = LOWER(?)').get(trimmed);
+    const existing = db.prepare('SELECT * FROM tags WHERE LOWER(name) = LOWER(?)').get(formattedName);
     if (existing) {
       return res.json({ id: existing.id, name: existing.name, already_exists: true });
     }
 
-    const info = db.prepare('INSERT INTO tags (name) VALUES (?)').run(trimmed);
-    res.status(201).json({ id: info.lastInsertRowid, name: trimmed, already_exists: false });
+    const info = db.prepare('INSERT INTO tags (name) VALUES (?)').run(formattedName);
+    res.status(201).json({ id: info.lastInsertRowid, name: formattedName, already_exists: false });
   } catch (err) {
     console.error('Error creating tag:', err);
     res.status(500).json({ error: 'Er is een fout opgetreden bij het aanmaken van de tag.' });

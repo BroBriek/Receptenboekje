@@ -178,10 +178,11 @@
 
     if (query && !exactMatch) {
       const isActive = itemIndex === activeTagSuggestionIndex;
+      const formattedTag = App.formatItemName(query);
       html += `
-        <div class="suggestion-item add-new-item ${isActive ? 'active' : ''}" data-create-tag="${App.escapeHtml(query)}" data-item-index="${itemIndex}">
+        <div class="suggestion-item add-new-item ${isActive ? 'active' : ''}" data-create-tag="${App.escapeHtml(formattedTag)}" data-item-index="${itemIndex}">
           <i data-lucide="plus" style="width:14px;height:14px;"></i>
-          <span>Voeg "<strong>${App.escapeHtml(query)}</strong>" toe als nieuwe tag</span>
+          <span>Voeg "<strong>${App.escapeHtml(formattedTag)}</strong>" toe als nieuwe tag</span>
         </div>
       `;
       itemIndex++;
@@ -206,7 +207,7 @@
     if (tagId !== null && tagId !== undefined) {
       App.state.recipeFormSelectedTagIds.add(tagId);
     } else if (tagName && tagName.trim()) {
-      const cleanName = tagName.trim();
+      const cleanName = App.formatItemName(tagName);
       const lower = cleanName.toLowerCase();
       const existing = (App.state.allTags || []).find(t => t.name.toLowerCase() === lower);
 
@@ -330,7 +331,7 @@
     const qtyEl = document.getElementById('ingQty');
     const unitEl = document.getElementById('ingUnit');
 
-    const name = nameEl.value.trim();
+    const name = App.formatItemName(nameEl.value);
     const qty = qtyEl.value ? parseFloat(qtyEl.value) : null;
     const unit = unitEl.value.trim();
 
@@ -618,10 +619,11 @@
 
     if (query && !exactMatch) {
       const isActive = itemIndex === activeIngSuggestionIndex;
+      const formattedIng = App.formatItemName(query);
       html += `
-        <div class="suggestion-item add-new-item ${isActive ? 'active' : ''}" data-suggestion="${App.escapeHtml(query)}" data-item-index="${itemIndex}">
+        <div class="suggestion-item add-new-item ${isActive ? 'active' : ''}" data-suggestion="${App.escapeHtml(formattedIng)}" data-item-index="${itemIndex}">
           <i data-lucide="plus" style="width:14px;height:14px;"></i>
-          <span>Voeg "<strong>${App.escapeHtml(query)}</strong>" toe als nieuw ingrediënt</span>
+          <span>Voeg "<strong>${App.escapeHtml(formattedIng)}</strong>" toe als nieuw ingrediënt</span>
         </div>
       `;
     }

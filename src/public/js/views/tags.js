@@ -91,7 +91,7 @@
     e.preventDefault();
     const input = document.getElementById('adminNewTagName');
     if (!input) return;
-    const name = input.value.trim();
+    const name = App.formatItemName(input.value);
     if (!name) return;
 
     try {

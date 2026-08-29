@@ -26,6 +26,16 @@ function deleteImage(filename) {
   }
 }
 
+// Helper to format item names (lowercase all characters, capitalize first letter)
+function formatItemName(str) {
+  if (!str || typeof str !== 'string') return '';
+  const trimmed = str.trim();
+  if (!trimmed) return '';
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+}
+
+
+
 // GET /api/recipes - List recipes with search, tags, and ingredients filters (shared cookbook)
 router.get('/', requireAuth, (req, res) => {
   const { q, tags, ingredients, match_mode } = req.query;
@@ -306,7 +316,7 @@ router.post('/', requireAuth, upload.single('image'), (req, res) => {
         if (typeof tagItem === 'number' || (typeof tagItem === 'string' && /^\d+$/.test(tagItem.trim()))) {
           tagId = parseInt(tagItem, 10);
         } else if (typeof tagItem === 'string' && tagItem.trim()) {
-          const nameClean = tagItem.trim();
+          const nameClean = formatItemName(tagItem);
           const existing = getTagByLower.get(nameClean);
           if (existing) {
             tagId = existing.id;
@@ -326,7 +336,7 @@ router.post('/', requireAuth, upload.single('image'), (req, res) => {
 
     // 3. Handle ingredients
     if (ingredients && ingredients.length > 0) {
-      const getIngredient = db.prepare('SELECT id FROM ingredients WHERE name = ?');
+      const getIngredient = db.prepare('SELECT id FROM ingredients WHERE LOWER(name) = LOWER(?)');
       const insertIngredient = db.prepare('INSERT INTO ingredients (name) VALUES (?)');
       const insertRecipeIngredient = db.prepare(`
         INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity, unit, notes, sort_order)
@@ -335,7 +345,7 @@ router.post('/', requireAuth, upload.single('image'), (req, res) => {
 
       ingredients.forEach((ing, index) => {
         if (!ing.name || !ing.name.trim()) return;
-        const nameClean = ing.name.trim().toLowerCase();
+        const nameClean = formatItemName(ing.name);
 
         let ingredientRow = getIngredient.get(nameClean);
         let ingredientId;
@@ -472,7 +482,7 @@ router.put('/:id', requireAuth, upload.single('image'), (req, res) => {
         if (typeof tagItem === 'number' || (typeof tagItem === 'string' && /^\d+$/.test(tagItem.trim()))) {
           tagId = parseInt(tagItem, 10);
         } else if (typeof tagItem === 'string' && tagItem.trim()) {
-          const nameClean = tagItem.trim();
+          const nameClean = formatItemName(tagItem);
           const existing = getTagByLower.get(nameClean);
           if (existing) {
             tagId = existing.id;
@@ -492,7 +502,7 @@ router.put('/:id', requireAuth, upload.single('image'), (req, res) => {
 
     // 4. Re-insert ingredients
     if (ingredients && ingredients.length > 0) {
-      const getIngredient = db.prepare('SELECT id FROM ingredients WHERE name = ?');
+      const getIngredient = db.prepare('SELECT id FROM ingredients WHERE LOWER(name) = LOWER(?)');
       const insertIngredient = db.prepare('INSERT INTO ingredients (name) VALUES (?)');
       const insertRecipeIngredient = db.prepare(`
         INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity, unit, notes, sort_order)
@@ -501,7 +511,7 @@ router.put('/:id', requireAuth, upload.single('image'), (req, res) => {
 
       ingredients.forEach((ing, index) => {
         if (!ing.name || !ing.name.trim()) return;
-        const nameClean = ing.name.trim().toLowerCase();
+        const nameClean = formatItemName(ing.name);
 
         let ingredientRow = getIngredient.get(nameClean);
         let ingredientId;

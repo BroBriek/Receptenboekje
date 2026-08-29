@@ -200,6 +200,66 @@ const migrations = [
       }
     },
   },
+  {
+    name: '005_standardize_ingredient_and_tag_casing',
+    up: () => {
+      function formatItemName(str) {
+        if (!str || typeof str !== 'string') return '';
+        const trimmed = str.trim();
+        if (!trimmed) return '';
+        return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+      }
+
+      // 1. Unify ingredients
+      const allIngredients = db.prepare('SELECT id, name FROM ingredients').all();
+      const ingGroups = new Map();
+
+      for (const ing of allIngredients) {
+        const formatted = formatItemName(ing.name);
+        const lowerKey = formatted.toLowerCase();
+        if (!ingGroups.has(lowerKey)) {
+          ingGroups.set(lowerKey, { formatted, items: [] });
+        }
+        ingGroups.get(lowerKey).items.push(ing);
+      }
+
+      for (const { formatted, items } of ingGroups.values()) {
+        const canonical = items[0];
+        // Handle duplicate rows first
+        for (let i = 1; i < items.length; i++) {
+          const duplicate = items[i];
+          db.prepare('UPDATE recipe_ingredients SET ingredient_id = ? WHERE ingredient_id = ?').run(canonical.id, duplicate.id);
+          db.prepare('DELETE FROM ingredients WHERE id = ?').run(duplicate.id);
+        }
+        // Update canonical row with standardized format
+        db.prepare('UPDATE ingredients SET name = ? WHERE id = ?').run(formatted, canonical.id);
+      }
+
+      // 2. Unify tags
+      const allTags = db.prepare('SELECT id, name FROM tags').all();
+      const tagGroups = new Map();
+
+      for (const tag of allTags) {
+        const formatted = formatItemName(tag.name);
+        const lowerKey = formatted.toLowerCase();
+        if (!tagGroups.has(lowerKey)) {
+          tagGroups.set(lowerKey, { formatted, items: [] });
+        }
+        tagGroups.get(lowerKey).items.push(tag);
+      }
+
+      for (const { formatted, items } of tagGroups.values()) {
+        const canonical = items[0];
+        for (let i = 1; i < items.length; i++) {
+          const duplicate = items[i];
+          db.prepare('UPDATE OR IGNORE recipe_tags SET tag_id = ? WHERE tag_id = ?').run(canonical.id, duplicate.id);
+          db.prepare('DELETE FROM recipe_tags WHERE tag_id = ?').run(duplicate.id);
+          db.prepare('DELETE FROM tags WHERE id = ?').run(duplicate.id);
+        }
+        db.prepare('UPDATE tags SET name = ? WHERE id = ?').run(formatted, canonical.id);
+      }
+    },
+  },
 ];
 
 // Ensure the migrations table exists before querying it
