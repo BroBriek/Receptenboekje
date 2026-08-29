@@ -273,6 +273,45 @@ const migrations = [
       }
     },
   },
+  {
+    name: '007_recipe_step_timers',
+    up: () => {
+      const stepTableInfo = db.prepare("PRAGMA table_info('recipe_steps')").all();
+      const hasTimerCol = stepTableInfo.some(col => col.name === 'timer_seconds');
+      if (!hasTimerCol) {
+        db.exec('ALTER TABLE recipe_steps ADD COLUMN timer_seconds INTEGER DEFAULT NULL;');
+      }
+
+      function detectTimerInText(text) {
+        if (!text || typeof text !== 'string') return null;
+        const minMatch = text.match(/(?:(\d+)\s*(?:-|tot|à)\s*)?(\d+(?:[.,]\d+)?)\s*(?:minuten|minuut|min\b|mins\b)/i);
+        if (minMatch) {
+          const minutes = parseFloat(minMatch[2].replace(',', '.'));
+          if (!isNaN(minutes) && minutes > 0) return Math.round(minutes * 60);
+        }
+        const secMatch = text.match(/(?:(\d+)\s*(?:-|tot|à)\s*)?(\d+)\s*(?:seconden|seconde|sec\b)/i);
+        if (secMatch) {
+          const seconds = parseInt(secMatch[2], 10);
+          if (!isNaN(seconds) && seconds > 0) return seconds;
+        }
+        const hrMatch = text.match(/(\d+(?:[.,]\d+)?)\s*(?:uur|uren|hour|hours)/i);
+        if (hrMatch) {
+          const hours = parseFloat(hrMatch[1].replace(',', '.'));
+          if (!isNaN(hours) && hours > 0) return Math.round(hours * 3600);
+        }
+        return null;
+      }
+
+      const steps = db.prepare('SELECT id, instruction FROM recipe_steps WHERE timer_seconds IS NULL').all();
+      const updateStmt = db.prepare('UPDATE recipe_steps SET timer_seconds = ? WHERE id = ?');
+      for (const step of steps) {
+        const t = detectTimerInText(step.instruction);
+        if (t) {
+          updateStmt.run(t, step.id);
+        }
+      }
+    },
+  },
 ];
 
 // Ensure the migrations table exists before querying it

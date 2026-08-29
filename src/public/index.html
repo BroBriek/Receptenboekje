@@ -32,6 +32,7 @@
   <link rel="stylesheet" href="/css/tags.css">
   <link rel="stylesheet" href="/css/users.css">
   <link rel="stylesheet" href="/css/overlays.css">
+  <link rel="stylesheet" href="/css/cooking.css">
 </head>
 <body>
 
@@ -418,8 +419,19 @@
                   <label for="stepText">Nieuwe bereidingsstap toevoegen</label>
                   <div class="step-input-row">
                     <textarea id="stepText" rows="3" placeholder="Beschrijf deze stap (bijv. 'Kook de pasta in ruim gezouten water beetgaar in 8-10 minuten.')..."></textarea>
-                    <button type="button" id="addStepBtn" class="btn btn-secondary btn-icon-only" title="Stap toevoegen">
-                      <i data-lucide="plus"></i>
+                  </div>
+                  <div class="step-input-controls">
+                    <div class="step-timer-input-wrap" title="Kookwekker instellen voor deze bereidingsstap (in minuten)">
+                      <i data-lucide="timer"></i>
+                      <input type="number" id="stepTimerMinutes" min="0" step="any" placeholder="Kooktijd (optioneel)" aria-label="Kookwekker in minuten">
+                      <span class="step-timer-unit">min</span>
+                    </div>
+                    <div id="stepTimerAutoSuggestion" class="step-timer-auto-suggestion hidden" role="button" tabindex="0" title="Klik om gedetecteerde timer in te stellen">
+                      <i data-lucide="sparkles" style="width:14px;height:14px;"></i>
+                      <span id="stepTimerAutoSuggestionText">Timer gedetecteerd</span>
+                    </div>
+                    <button type="button" id="addStepBtn" class="btn btn-secondary btn-sm add-step-btn" title="Stap toevoegen">
+                      <i data-lucide="plus"></i> Stap Toevoegen
                     </button>
                   </div>
                 </div>
@@ -1222,7 +1234,10 @@
           
           <!-- Steps column -->
           <div class="recipe-detail-right">
-            <h4>Bereidingswijze</h4>
+            <div class="detail-section-header">
+              <h4>Bereidingswijze</h4>
+              <span class="field-hint" style="font-size:0.8rem; margin:0;"><i data-lucide="timer" style="width:13px;height:13px;vertical-align:-2px;"></i> met timers</span>
+            </div>
             <ol id="recipeDetailStepsList" class="detail-steps-list">
               <!-- Populated by JS -->
             </ol>
@@ -1232,6 +1247,10 @@
       <div class="modal-footer">
         <button type="button" id="deleteDetailRecipeBtn" class="btn btn-outline-danger" style="margin-right: auto;">Verwijderen</button>
         <button type="button" id="editDetailRecipeBtn" class="btn btn-secondary">Bewerken</button>
+        <button type="button" id="startCookingFooterBtn" class="btn btn-primary btn-cooking-play">
+          <i data-lucide="play" style="fill: currentColor; width:14px; height:14px;"></i>
+          <span>Start Kookmodus</span>
+        </button>
         <button type="button" class="btn btn-outline" data-close-modal="recipeDetailModal">Sluiten</button>
       </div>
     </div>
@@ -1458,6 +1477,147 @@
     </div>
   </dialog>
 
+  <!-- ── INTERACTIVE FULLSCREEN COOKING MODE OVERLAY ── -->
+  <div id="cookingModeOverlay" class="cooking-overlay hidden" role="dialog" aria-modal="true" aria-label="Interactieve Kookmodus">
+    <!-- Top Header Bar -->
+    <header class="cooking-header">
+      <div class="cooking-header-left">
+        <img id="cookingRecipeThumb" src="" alt="" class="cooking-recipe-thumb hidden">
+        <div id="cookingRecipeThumbPlaceholder" class="cooking-recipe-thumb-placeholder">
+          <i data-lucide="cooking-pot" style="width:24px;height:24px;"></i>
+        </div>
+        <div class="cooking-recipe-meta">
+          <h2 id="cookingRecipeTitle" class="cooking-recipe-title">Recept</h2>
+          <span id="cookingStepBadge" class="cooking-step-badge">Stap 1 van 5</span>
+        </div>
+      </div>
+
+      <div class="cooking-header-actions">
+        <!-- Scaled Servings Stepper -->
+        <div class="cooking-servings-stepper" title="Porties aanpassen voor deze kooksessie">
+          <button type="button" id="cookingServingsDecBtn" class="cooking-servings-btn" aria-label="Minder porties">
+            <i data-lucide="minus" style="width:14px;height:14px;"></i>
+          </button>
+          <span id="cookingServingsLabel" class="cooking-servings-label">4</span>
+          <span class="cooking-servings-text">pers</span>
+          <button type="button" id="cookingServingsIncBtn" class="cooking-servings-btn" aria-label="Meer porties">
+            <i data-lucide="plus" style="width:14px;height:14px;"></i>
+          </button>
+        </div>
+
+        <!-- Toggle Ingredients Drawer Button -->
+        <button type="button" id="cookingIngredientsToggleBtn" class="btn-cooking-tool" title="Bekijk ingrediëntenlijst" aria-label="Ingrediëntenlijst">
+          <i data-lucide="apple"></i>
+          <span class="hide-mobile">Ingrediënten</span>
+        </button>
+
+        <!-- Screen Wake Lock Toggle -->
+        <button type="button" id="cookingWakeLockBtn" class="btn-cooking-tool" title="Houd scherm ingeschakeld tijdens het koken" aria-label="Scherm aanhouden">
+          <i data-lucide="sun-medium"></i>
+          <span class="hide-mobile">Scherm aan</span>
+        </button>
+
+        <!-- Fullscreen Toggle -->
+        <button type="button" id="cookingFullscreenBtn" class="btn-cooking-tool hide-small-mobile" title="Volledig scherm in/uitschakelen" aria-label="Volledig scherm">
+          <i data-lucide="maximize"></i>
+        </button>
+
+        <!-- Exit Cooking Mode -->
+        <button type="button" id="cookingCloseBtn" class="btn-cooking-close" title="Kookmodus afsluiten" aria-label="Kookmodus sluiten">
+          <i data-lucide="x"></i>
+          <span class="hide-mobile">Sluiten</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Step Progress Bar & Dots -->
+    <div class="cooking-progress-container">
+      <div class="cooking-progress-track">
+        <div id="cookingProgressFill" class="cooking-progress-fill" style="width: 20%;"></div>
+      </div>
+      <div id="cookingStepPills" class="cooking-step-pills">
+        <!-- Step pills injected dynamically -->
+      </div>
+    </div>
+
+    <!-- Main Step Stage -->
+    <main id="cookingMainStage" class="cooking-stage">
+      <div class="cooking-card">
+        <div class="cooking-step-header">
+          <span id="cookingCurrentStepTag" class="cooking-step-tag">
+            <i data-lucide="chef-hat"></i> Stap 1
+          </span>
+          <button type="button" id="cookingStepCheckBtn" class="cooking-step-check-btn">
+            <i data-lucide="circle"></i>
+            <span>Markeer als klaar</span>
+          </button>
+        </div>
+
+        <p id="cookingStepInstruction" class="cooking-step-instruction">
+          Bereidingsinstructie wordt geladen...
+        </p>
+
+        <!-- Timers Section on Step Card -->
+        <div id="cookingTimersContainer" class="cooking-timers-section hidden">
+          <!-- Dynamic timer cards & presets injected here -->
+        </div>
+      </div>
+    </main>
+
+    <!-- Completion Celebration Stage (Hidden by default) -->
+    <div id="cookingCelebrationStage" class="cooking-stage hidden">
+      <canvas id="cookingConfettiCanvas" class="confetti-canvas"></canvas>
+      <div class="cooking-card cooking-celebration-card">
+        <div class="cooking-celebration-icon">
+          <i data-lucide="chef-hat"></i>
+        </div>
+        <h2 class="cooking-celebration-title">Eet Smakelijk!</h2>
+        <p class="cooking-celebration-desc">Je hebt alle stappen van dit gerecht succesvol doorlopen. Geniet van je heerlijke maaltijd!</p>
+        <button type="button" id="cookingFinishReturnBtn" class="btn btn-primary btn-lg" style="margin-top: 1rem;">
+          <i data-lucide="check"></i> Terug naar het Receptenboek
+        </button>
+      </div>
+    </div>
+
+    <!-- Floating Dock for Background Active Timers -->
+    <div id="cookingActiveTimersDock" class="cooking-active-timers-dock hidden">
+      <!-- Populated with background active timers -->
+    </div>
+
+    <!-- Ingredients Sidebar Drawer -->
+    <div id="cookingDrawerBackdrop" class="cooking-drawer-backdrop"></div>
+    <aside id="cookingIngredientsDrawer" class="cooking-ingredients-drawer" aria-label="Ingrediëntenlijst">
+      <div class="cooking-drawer-header">
+        <h3 class="cooking-drawer-title">
+          <i data-lucide="apple" style="color:var(--secondary)"></i> Ingrediënten
+        </h3>
+        <button type="button" id="cookingDrawerCloseBtn" class="btn-icon" aria-label="Sluit ingrediëntenpaneel">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="cooking-drawer-body">
+        <ul id="cookingIngredientsList" class="cooking-drawer-list">
+          <!-- Dynamically populated with scaled ingredients and checkboxes -->
+        </ul>
+      </div>
+    </aside>
+
+    <!-- Bottom Navigation Controls -->
+    <footer class="cooking-footer">
+      <button type="button" id="cookingPrevBtn" class="btn-cooking-nav btn-cooking-prev" disabled>
+        <i data-lucide="arrow-left"></i>
+        <span>Vorige stap</span>
+      </button>
+
+      <span id="cookingFooterCounter" class="cooking-step-counter">1 / 5</span>
+
+      <button type="button" id="cookingNextBtn" class="btn-cooking-nav btn-cooking-next">
+        <span>Volgende stap</span>
+        <i data-lucide="arrow-right"></i>
+      </button>
+    </footer>
+  </div>
+
   <!-- JS Modules (loaded in dependency order) -->
   <!-- Core -->
   <script src="/js/app.js"></script>
@@ -1470,6 +1630,7 @@
   <script src="/js/views/recipes.js"></script>
   <script src="/js/views/recipeDetail.js"></script>
   <script src="/js/views/recipeForm.js"></script>
+  <script src="/js/views/cookingMode.js"></script>
   <script src="/js/views/settings.js"></script>
   <script src="/js/views/ingredients.js"></script>
   <script src="/js/views/ingredientsManage.js"></script>

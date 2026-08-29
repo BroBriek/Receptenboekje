@@ -238,7 +238,7 @@ router.get('/:id', requireAuth, (req, res) => {
 
     // Get steps
     recipe.steps = db.prepare(`
-      SELECT step_number, instruction, image_path
+      SELECT step_number, instruction, image_path, timer_seconds
       FROM recipe_steps
       WHERE recipe_id = ?
       ORDER BY step_number ASC
@@ -371,12 +371,20 @@ router.post('/', requireAuth, upload.single('image'), (req, res) => {
     // 4. Handle steps
     if (steps && steps.length > 0) {
       const insertStep = db.prepare(`
-        INSERT INTO recipe_steps (recipe_id, step_number, instruction)
-        VALUES (?, ?, ?)
+        INSERT INTO recipe_steps (recipe_id, step_number, instruction, timer_seconds)
+        VALUES (?, ?, ?, ?)
       `);
       steps.forEach((step, index) => {
         if (!step.instruction || !step.instruction.trim()) return;
-        insertStep.run(recipeId, index + 1, step.instruction.trim());
+        let timerSec = null;
+        if (step.timer_seconds !== undefined && step.timer_seconds !== null && step.timer_seconds !== '') {
+          const parsed = parseInt(step.timer_seconds, 10);
+          if (!isNaN(parsed) && parsed > 0) timerSec = parsed;
+        } else if (step.timer_minutes !== undefined && step.timer_minutes !== null && step.timer_minutes !== '') {
+          const parsedMin = parseFloat(step.timer_minutes);
+          if (!isNaN(parsedMin) && parsedMin > 0) timerSec = Math.round(parsedMin * 60);
+        }
+        insertStep.run(recipeId, index + 1, step.instruction.trim(), timerSec);
       });
     }
   });
@@ -537,12 +545,20 @@ router.put('/:id', requireAuth, upload.single('image'), (req, res) => {
     // 5. Re-insert steps
     if (steps && steps.length > 0) {
       const insertStep = db.prepare(`
-        INSERT INTO recipe_steps (recipe_id, step_number, instruction)
-        VALUES (?, ?, ?)
+        INSERT INTO recipe_steps (recipe_id, step_number, instruction, timer_seconds)
+        VALUES (?, ?, ?, ?)
       `);
       steps.forEach((step, index) => {
         if (!step.instruction || !step.instruction.trim()) return;
-        insertStep.run(recipeId, index + 1, step.instruction.trim());
+        let timerSec = null;
+        if (step.timer_seconds !== undefined && step.timer_seconds !== null && step.timer_seconds !== '') {
+          const parsed = parseInt(step.timer_seconds, 10);
+          if (!isNaN(parsed) && parsed > 0) timerSec = parsed;
+        } else if (step.timer_minutes !== undefined && step.timer_minutes !== null && step.timer_minutes !== '') {
+          const parsedMin = parseFloat(step.timer_minutes);
+          if (!isNaN(parsedMin) && parsedMin > 0) timerSec = Math.round(parsedMin * 60);
+        }
+        insertStep.run(recipeId, index + 1, step.instruction.trim(), timerSec);
       });
     }
   });

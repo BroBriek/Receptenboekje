@@ -470,10 +470,30 @@ const recipes = [
   },
 ];
 
+function detectTimerInText(text) {
+  if (!text || typeof text !== 'string') return null;
+  const minMatch = text.match(/(?:(\d+)\s*(?:-|tot|à)\s*)?(\d+(?:[.,]\d+)?)\s*(?:minuten|minuut|min\b|mins\b)/i);
+  if (minMatch) {
+    const minutes = parseFloat(minMatch[2].replace(',', '.'));
+    if (!isNaN(minutes) && minutes > 0) return Math.round(minutes * 60);
+  }
+  const secMatch = text.match(/(?:(\d+)\s*(?:-|tot|à)\s*)?(\d+)\s*(?:seconden|seconde|sec\b)/i);
+  if (secMatch) {
+    const seconds = parseInt(secMatch[2], 10);
+    if (!isNaN(seconds) && seconds > 0) return seconds;
+  }
+  const hrMatch = text.match(/(\d+(?:[.,]\d+)?)\s*(?:uur|uren|hour|hours)/i);
+  if (hrMatch) {
+    const hours = parseFloat(hrMatch[1].replace(',', '.'));
+    if (!isNaN(hours) && hours > 0) return Math.round(hours * 3600);
+  }
+  return null;
+}
+
 const insertRecipe = db.prepare(`INSERT INTO recipes (id, user_id, title, description, servings, prep_time, cook_time) VALUES (?, ?, ?, ?, ?, ?, ?)`);
 const insertRecipeTag = db.prepare(`INSERT OR IGNORE INTO recipe_tags (recipe_id, tag_id) VALUES (?, ?)`);
 const insertRecipeIngredient = db.prepare(`INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity, unit, notes, sort_order) VALUES (?, ?, ?, ?, ?, ?)`);
-const insertStep = db.prepare(`INSERT INTO recipe_steps (recipe_id, step_number, instruction) VALUES (?, ?, ?)`);
+const insertStep = db.prepare(`INSERT INTO recipe_steps (recipe_id, step_number, instruction, timer_seconds) VALUES (?, ?, ?, ?)`);
 const recipeExists = db.prepare('SELECT id FROM recipes WHERE title = ?');
 
 const seedAll = db.transaction(() => {
@@ -488,7 +508,7 @@ const seedAll = db.transaction(() => {
     insertRecipe.run(recipeId, userId, recipe.title, recipe.description, recipe.servings, recipe.prep_time, recipe.cook_time);
     for (const tagName of recipe.tags) insertRecipeTag.run(recipeId, getOrCreateTag(tagName));
     recipe.ingredients.forEach((ing, idx) => insertRecipeIngredient.run(recipeId, getOrCreateIngredient(ing.name), ing.quantity ?? null, ing.unit ?? null, ing.notes ?? null, idx));
-    recipe.steps.forEach((instruction, idx) => insertStep.run(recipeId, idx + 1, instruction));
+    recipe.steps.forEach((instruction, idx) => insertStep.run(recipeId, idx + 1, instruction, detectTimerInText(instruction)));
     console.log(`  Added: ${recipe.title}`);
     added++;
   }

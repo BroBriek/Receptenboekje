@@ -33,6 +33,11 @@
     const uploadBtnText = document.getElementById('uploadBtnText');
     if (uploadBtnText) uploadBtnText.textContent = 'Upload foto';
 
+    const timerInput = document.getElementById('stepTimerMinutes');
+    if (timerInput) timerInput.value = '';
+    const autoSugg = document.getElementById('stepTimerAutoSuggestion');
+    if (autoSugg) autoSugg.classList.add('hidden');
+
     await App.fetchTags();
     renderRecipeFormIngredients();
     renderRecipeFormSteps();
@@ -49,11 +54,17 @@
       unit: i.unit,
       notes: i.notes
     }));
-    App.state.recipeFormSteps = recipe.steps.map(s => ({
+    App.state.recipeFormSteps = (recipe.steps || []).map(s => ({
       step_number: s.step_number,
-      instruction: s.instruction
+      instruction: s.instruction,
+      timer_seconds: (s.timer_seconds && s.timer_seconds > 0) ? s.timer_seconds : App.detectTimerInText(s.instruction)
     }));
     App.state.recipeFormSelectedTagIds = new Set(recipe.tags.map(t => t.id));
+
+    const timerInput = document.getElementById('stepTimerMinutes');
+    if (timerInput) timerInput.value = '';
+    const autoSugg = document.getElementById('stepTimerAutoSuggestion');
+    if (autoSugg) autoSugg.classList.add('hidden');
 
     document.getElementById('recipeFormTitle').textContent = 'Recept Aanpassen';
     document.getElementById('recipeFormId').value = recipe.id;
@@ -397,23 +408,75 @@
     }
   });
 
-  // Recipe Steps Builder UI handlers
+  // Recipe Steps Builder UI handlers & auto-detection
+  const stepTextEl = document.getElementById('stepText');
+  const stepTimerInput = document.getElementById('stepTimerMinutes');
+  const stepTimerAutoSuggestion = document.getElementById('stepTimerAutoSuggestion');
+  const stepTimerAutoSuggestionText = document.getElementById('stepTimerAutoSuggestionText');
+
+  let detectedSecForStep = null;
+
+  if (stepTextEl) {
+    stepTextEl.addEventListener('input', () => {
+      const text = stepTextEl.value;
+      detectedSecForStep = App.detectTimerInText(text);
+
+      if (detectedSecForStep && detectedSecForStep > 0 && stepTimerAutoSuggestion) {
+        const badge = App.formatTimerBadgeText(detectedSecForStep);
+        if (stepTimerAutoSuggestionText) {
+          stepTimerAutoSuggestionText.textContent = `${badge} kookwekker gedetecteerd (klik om in te stellen)`;
+        }
+        stepTimerAutoSuggestion.classList.remove('hidden');
+      } else if (stepTimerAutoSuggestion) {
+        stepTimerAutoSuggestion.classList.add('hidden');
+      }
+    });
+  }
+
+  if (stepTimerAutoSuggestion) {
+    stepTimerAutoSuggestion.addEventListener('click', () => {
+      if (detectedSecForStep && stepTimerInput) {
+        const minVal = detectedSecForStep / 60;
+        stepTimerInput.value = (Math.round(minVal * 100) / 100).toString();
+        stepTimerAutoSuggestion.classList.add('hidden');
+        stepTimerInput.focus();
+      }
+    });
+  }
+
   document.getElementById('addStepBtn')?.addEventListener('click', () => {
-    const stepTextEl = document.getElementById('stepText');
-    const instruction = stepTextEl.value.trim();
+    const instruction = stepTextEl ? stepTextEl.value.trim() : '';
 
     if (!instruction) {
       App.showToast('Stap instructie is verplicht!', 'error');
-      stepTextEl.focus();
+      stepTextEl?.focus();
       return;
     }
 
+    let timer_seconds = null;
+    if (stepTimerInput && stepTimerInput.value) {
+      const val = parseFloat(stepTimerInput.value);
+      if (!isNaN(val) && val > 0) {
+        timer_seconds = Math.round(val * 60);
+      }
+    } else {
+      timer_seconds = App.detectTimerInText(instruction);
+    }
+
     const nextStepNum = App.state.recipeFormSteps.length + 1;
-    App.state.recipeFormSteps.push({ step_number: nextStepNum, instruction });
-    stepTextEl.value = '';
+    App.state.recipeFormSteps.push({
+      step_number: nextStepNum,
+      instruction,
+      timer_seconds: timer_seconds && timer_seconds > 0 ? timer_seconds : null
+    });
+
+    if (stepTextEl) stepTextEl.value = '';
+    if (stepTimerInput) stepTimerInput.value = '';
+    if (stepTimerAutoSuggestion) stepTimerAutoSuggestion.classList.add('hidden');
+    detectedSecForStep = null;
 
     renderRecipeFormSteps();
-    stepTextEl.focus();
+    stepTextEl?.focus();
   });
 
   function renderRecipeFormSteps() {
@@ -422,8 +485,17 @@
     list.innerHTML = '';
     App.state.recipeFormSteps.forEach((step, index) => {
       const li = document.createElement('li');
+      let timerBadge = '';
+      if (step.timer_seconds && step.timer_seconds > 0) {
+        const badgeText = App.formatTimerBadgeText(step.timer_seconds);
+        timerBadge = `<span class="step-timer-tag" title="Kookwekker: ${badgeText}"><i data-lucide="timer"></i> ${badgeText}</span>`;
+      }
+
       li.innerHTML = `
-        <span>${App.escapeHtml(step.instruction)}</span>
+        <div style="display:flex; align-items:center; gap:0.5rem; flex:1; min-width:0; padding-right:1rem;">
+          <span style="flex:1; word-break:break-word;">${App.escapeHtml(step.instruction)}</span>
+          ${timerBadge}
+        </div>
         <button type="button" data-remove-step="${index}" aria-label="Verwijder stap">
           <i data-lucide="x" style="width:16px;height:16px;"></i>
         </button>

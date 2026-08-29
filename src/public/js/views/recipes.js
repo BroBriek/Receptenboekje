@@ -93,6 +93,10 @@
           <div class="recipe-card-author-badge" title="Toegevoegd door ${App.escapeHtml(authorName)}">
             ${authorAvatarHtml}
           </div>
+          <button type="button" class="recipe-card-play-btn" data-start-cooking="${recipe.id}" title="Start kookmodus voor ${App.escapeQuotes(recipe.title)}">
+            <i data-lucide="play" style="fill: currentColor;"></i>
+            <span>Koken</span>
+          </button>
         </div>
         <div class="recipe-card-content">
           <h3 class="recipe-card-title">${App.escapeHtml(recipe.title)}</h3>
@@ -127,6 +131,16 @@
 
       grid.appendChild(card);
     });
+
+    // Event delegation for card play buttons
+    grid.onclick = (e) => {
+      const playBtn = e.target.closest('[data-start-cooking]');
+      if (playBtn) {
+        e.stopPropagation();
+        const id = playBtn.getAttribute('data-start-cooking');
+        if (id) App.startCookingMode(id);
+      }
+    };
 
     if (window.lucide) lucide.createIcons();
   }

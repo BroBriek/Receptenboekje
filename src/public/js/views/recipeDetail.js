@@ -137,15 +137,55 @@
       // Render dynamically scaled ingredients list
       renderDetailIngredients();
 
-      // Steps list
+      // Steps list with timer badges & click-to-cook
       const stepsList = document.getElementById('recipeDetailStepsList');
       if (recipe.steps && recipe.steps.length > 0) {
-        stepsList.innerHTML = recipe.steps.map(step => `
-          <li>${App.escapeHtml(step.instruction)}</li>
-        `).join('');
+        stepsList.innerHTML = recipe.steps.map((step, idx) => {
+          const timerSec = (step.timer_seconds && step.timer_seconds > 0) 
+            ? step.timer_seconds 
+            : App.detectTimerInText(step.instruction);
+
+          let timerHtml = '';
+          if (timerSec && timerSec > 0) {
+            const badgeText = App.formatTimerBadgeText(timerSec);
+            timerHtml = `
+              <span class="step-timer-tag clickable" data-start-cooking-step="${idx}" title="Start kookmodus bij deze stap (${badgeText})">
+                <i data-lucide="timer"></i> ${badgeText}
+              </span>
+            `;
+          }
+
+          return `
+            <li>
+              <span>${App.escapeHtml(step.instruction)}</span>
+              ${timerHtml}
+            </li>
+          `;
+        }).join('');
       } else {
         stepsList.innerHTML = '<li style="font-style:italic;">Geen bereidingsstappen ingevoerd.</li>';
       }
+
+      // Hook up Start Cooking button in footer
+      const handleStartCooking = () => {
+        if (currentRecipe) {
+          App.startCookingMode(currentRecipe, { servings: currentServings });
+        }
+      };
+
+      const footerCookBtn = document.getElementById('startCookingFooterBtn');
+      if (footerCookBtn) footerCookBtn.onclick = handleStartCooking;
+
+      // Click delegation for step timer tags in modal
+      stepsList.onclick = (e) => {
+        const timerTag = e.target.closest('[data-start-cooking-step]');
+        if (timerTag) {
+          const stepIdx = parseInt(timerTag.getAttribute('data-start-cooking-step'), 10);
+          if (!isNaN(stepIdx) && currentRecipe) {
+            App.startCookingMode(currentRecipe, { servings: currentServings, stepIndex: stepIdx });
+          }
+        }
+      };
 
       const isRecipeTab = (options.fromRecipeTab !== undefined)
         ? Boolean(options.fromRecipeTab)
