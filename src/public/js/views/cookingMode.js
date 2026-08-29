@@ -325,11 +325,11 @@
             <span class="cooking-subtle-timer-label">Optionele kookwekker:</span>
           </div>
           <div class="cooking-subtle-timer-presets">
-            <button type="button" class="cooking-subtle-chip" data-add-preset-timer="60">+1m</button>
-            <button type="button" class="cooking-subtle-chip" data-add-preset-timer="180">+3m</button>
-            <button type="button" class="cooking-subtle-chip" data-add-preset-timer="300">+5m</button>
-            <button type="button" class="cooking-subtle-chip" data-add-preset-timer="600">+10m</button>
-            <button type="button" class="cooking-subtle-chip" data-add-preset-timer="900">+15m</button>
+            <button type="button" class="cooking-subtle-chip" data-add-preset-timer="60">+ 1 min</button>
+            <button type="button" class="cooking-subtle-chip" data-add-preset-timer="180">+ 3 min</button>
+            <button type="button" class="cooking-subtle-chip" data-add-preset-timer="300">+ 5 min</button>
+            <button type="button" class="cooking-subtle-chip" data-add-preset-timer="600">+ 10 min</button>
+            <button type="button" class="cooking-subtle-chip" data-add-preset-timer="900">+ 15 min</button>
             <button type="button" class="cooking-subtle-chip cooking-subtle-chip-custom" data-add-custom-timer="true">
               <i data-lucide="plus" style="width:12px;height:12px;display:inline-block;vertical-align:-1px;"></i> Aangepast
             </button>
