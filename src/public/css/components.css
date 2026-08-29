@@ -59,10 +59,10 @@
 .btn-generate {
   background-color: var(--primary);
   color: var(--white);
-  border: none;
+  border: 1px solid transparent;
   font-weight: 700;
   font-size: 0.95rem;
-  padding: 0.65rem 1.35rem;
+  padding: 0.65rem 1.25rem;
   border-radius: var(--radius-pill);
   display: inline-flex;
   align-items: center;

@@ -75,6 +75,15 @@ function updateHeaderUserDisplay() {
   const usernameDisplay = document.getElementById('usernameDisplay');
   if (usernameDisplay) usernameDisplay.textContent = state.user.username;
 
+  const dropdownUsername = document.getElementById('dropdownUsername');
+  if (dropdownUsername) dropdownUsername.textContent = state.user.username;
+
+  const dropdownRole = document.getElementById('dropdownRole');
+  if (dropdownRole) {
+    const isAdmin = (state.user.is_admin == 1 || state.user.is_admin === true);
+    dropdownRole.textContent = isAdmin ? 'Beheerder' : 'Gezinslid';
+  }
+
   const avatarContainer = document.getElementById('headerAvatarContainer');
   if (avatarContainer) {
     if (state.user.avatar_path) {
@@ -194,13 +203,74 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
   }
 });
 
+// User Dropdown Menu Management
+const headerUserPill = document.getElementById('headerUserPill');
+const headerUserDropdown = document.getElementById('headerUserDropdown');
+
+function toggleUserDropdown(forceOpen) {
+  if (!headerUserDropdown) return;
+  const isCurrentlyOpen = !headerUserDropdown.classList.contains('hidden');
+  const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : !isCurrentlyOpen;
+  
+  if (shouldOpen) {
+    headerUserDropdown.classList.remove('hidden');
+    headerUserPill?.setAttribute('aria-expanded', 'true');
+  } else {
+    headerUserDropdown.classList.add('hidden');
+    headerUserPill?.setAttribute('aria-expanded', 'false');
+  }
+}
+
+function closeUserDropdown() {
+  toggleUserDropdown(false);
+}
+
+headerUserPill?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleUserDropdown();
+});
+
+headerUserPill?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    toggleUserDropdown();
+  }
+});
+
+document.addEventListener('click', (e) => {
+  if (headerUserDropdown && !headerUserDropdown.contains(e.target) && !headerUserPill?.contains(e.target)) {
+    closeUserDropdown();
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeUserDropdown();
+  }
+});
+
+document.getElementById('headerMenuDashboardBtn')?.addEventListener('click', () => {
+  closeUserDropdown();
+  showView('Planner');
+});
+
+document.getElementById('headerMenuSettingsBtn')?.addEventListener('click', () => {
+  closeUserDropdown();
+  showView('Settings');
+});
+
+document.getElementById('headerMenuLogoutBtn')?.addEventListener('click', () => {
+  closeUserDropdown();
+  logout();
+});
+
 document.getElementById('logoutBtn')?.addEventListener('click', logout);
 document.getElementById('headerLogoBtn')?.addEventListener('click', () => showView('Planner'));
-document.getElementById('headerUserPill')?.addEventListener('click', () => showView('Settings'));
 document.getElementById('headerSettingsBtn')?.addEventListener('click', () => showView('Settings'));
 
 // ── VIEW ROUTING ──────────────────────────────────────────────────────────────
 function showView(viewName) {
+  closeUserDropdown();
   if (!state.token) {
     viewName = 'Auth';
   }

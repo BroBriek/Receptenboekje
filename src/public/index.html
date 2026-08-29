@@ -53,18 +53,41 @@
         <h1>Receptenboekje</h1>
       </div>
       <div class="header-user">
-        <div id="headerUserPill" class="user-pill clickable" title="Mijn instellingen & profiel">
+        <div id="headerUserPill" class="user-pill clickable" title="Gebruikersmenu openen" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false">
           <div id="headerAvatarContainer" class="user-avatar-badge">
             <!-- Populated with image or initial -->
           </div>
           <span id="usernameDisplay">Gebruiker</span>
+          <i data-lucide="chevron-down" class="user-pill-chevron"></i>
         </div>
-        <button id="headerSettingsBtn" class="btn-icon" title="Instellingen" aria-label="Instellingen">
+        <button id="headerSettingsBtn" class="btn-icon header-desktop-action" title="Instellingen" aria-label="Instellingen">
           <i data-lucide="settings"></i>
         </button>
-        <button id="logoutBtn" class="btn-icon" title="Uitloggen" aria-label="Uitloggen">
+        <button id="logoutBtn" class="btn-icon header-desktop-action" title="Uitloggen" aria-label="Uitloggen">
           <i data-lucide="log-out"></i>
         </button>
+
+        <!-- User Dropdown Menu -->
+        <div id="headerUserDropdown" class="header-dropdown-menu hidden" role="menu" aria-label="Gebruikersmenu">
+          <div class="dropdown-header-info">
+            <span id="dropdownUsername" class="dropdown-user-name">Gebruiker</span>
+            <span id="dropdownRole" class="dropdown-user-role">Ingelogd</span>
+          </div>
+          <div class="dropdown-divider"></div>
+          <button type="button" class="dropdown-item" id="headerMenuDashboardBtn" role="menuitem">
+            <i data-lucide="layout-dashboard"></i>
+            <span>Dashboard</span>
+          </button>
+          <button type="button" class="dropdown-item" id="headerMenuSettingsBtn" role="menuitem">
+            <i data-lucide="settings"></i>
+            <span>Instellingen</span>
+          </button>
+          <div class="dropdown-divider"></div>
+          <button type="button" class="dropdown-item dropdown-item-danger" id="headerMenuLogoutBtn" role="menuitem">
+            <i data-lucide="log-out"></i>
+            <span>Uitloggen</span>
+          </button>
+        </div>
       </div>
     </header>
 

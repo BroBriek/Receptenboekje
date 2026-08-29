@@ -53,6 +53,15 @@
     const usernameDisplay = document.getElementById('usernameDisplay');
     if (usernameDisplay) usernameDisplay.textContent = App.state.user.username;
 
+    const dropdownUsername = document.getElementById('dropdownUsername');
+    if (dropdownUsername) dropdownUsername.textContent = App.state.user.username;
+
+    const dropdownRole = document.getElementById('dropdownRole');
+    if (dropdownRole) {
+      const isAdmin = (App.state.user.is_admin == 1 || App.state.user.is_admin === true);
+      dropdownRole.textContent = isAdmin ? 'Beheerder' : 'Gezinslid';
+    }
+
     const avatarContainer = document.getElementById('headerAvatarContainer');
     if (avatarContainer) {
       if (App.state.user.avatar_path) {

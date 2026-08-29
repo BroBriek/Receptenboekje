@@ -4,6 +4,10 @@
 (function(App) {
 
   function showView(viewName) {
+    if (typeof App.closeUserDropdown === 'function') {
+      App.closeUserDropdown();
+    }
+
     // If not logged in, enforce Auth view
     if (!App.state.token) {
       viewName = 'Auth';
