@@ -30,12 +30,12 @@ COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Expose the default application port (override via PORT env var)
-EXPOSE 3000
+EXPOSE 3001
 
 ENV NODE_ENV=production \
     DB_PATH=/app/data/receptenboekje.db \
     UPLOADS_PATH=/app/uploads \
-    PORT=3000
+    PORT=3001
 
 ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["sh", "-c", "node src/db/migrate.js && node src/server.js"]

@@ -64,7 +64,7 @@ npm run db:migrate
 npm run dev
 ```
 
-The server will be available at **http://localhost:8080**.
+The server will be available at **http://localhost:3001**.
 
 ### Default Admin Account
 

@@ -8,10 +8,10 @@ services:
     container_name: receptenboekje
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${PORT:-3001}:3001"
     environment:
       NODE_ENV: production
-      PORT: 3000
+      PORT: 3001
       DB_PATH: /app/data/receptenboekje.db
       UPLOADS_PATH: /app/uploads
       # Override SESSION_SECRET in a .env file or via environment
@@ -23,7 +23,7 @@ services:
       - ./data:/app/data:z
       - ./uploads:/app/uploads:z
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
       interval: 30s
       timeout: 5s
       retries: 3
