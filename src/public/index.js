@@ -784,36 +784,6 @@ document.getElementById('confirmQuickPlanBtn')?.addEventListener('click', async 
   }
 });
 
-document.querySelectorAll('.planner-tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.planner-tab-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-
-    const tab = btn.getAttribute('data-planner-tab');
-    const weekSection = document.getElementById('plannerWeekSection');
-    const monthSection = document.getElementById('plannerMonthSection');
-    const unplannedSection = document.getElementById('plannerUnplannedSection');
-
-    if (tab === 'all') {
-      if (weekSection) weekSection.classList.remove('hidden');
-      if (monthSection) monthSection.classList.remove('hidden');
-      if (unplannedSection) unplannedSection.classList.remove('hidden');
-    } else if (tab === 'week') {
-      if (weekSection) weekSection.classList.remove('hidden');
-      if (monthSection) monthSection.classList.add('hidden');
-      if (unplannedSection) unplannedSection.classList.add('hidden');
-    } else if (tab === 'month') {
-      if (weekSection) weekSection.classList.add('hidden');
-      if (monthSection) monthSection.classList.remove('hidden');
-      if (unplannedSection) unplannedSection.classList.add('hidden');
-    } else if (tab === 'unplanned') {
-      if (weekSection) weekSection.classList.add('hidden');
-      if (monthSection) monthSection.classList.add('hidden');
-      if (unplannedSection) unplannedSection.classList.remove('hidden');
-    }
-  });
-});
-
 document.getElementById('viewPlanner')?.addEventListener('click', (e) => {
   const quickBtn = e.target.closest('[data-quick-plan-id]');
   if (quickBtn) {
