@@ -3,7 +3,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: calc(100vh - var(--nav-height) - 120px);
+  min-height: calc(100vh - 4rem);
 }
 
 .auth-card {

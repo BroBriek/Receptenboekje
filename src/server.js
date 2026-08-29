@@ -35,9 +35,10 @@ app.use(helmet({
       formAction: ["'self'"],
       frameAncestors: ["'self'"],
       objectSrc: ["'none'"],
-      upgradeInsecureRequests: []
+      upgradeInsecureRequests: null
     }
-  }
+  },
+  hsts: false
 }));
 app.use(cors());
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));

@@ -5,6 +5,8 @@
 
   async function checkAuth() {
     if (!App.state.token) {
+      document.getElementById('appHeader')?.classList.add('hidden');
+      document.getElementById('appNav')?.classList.add('hidden');
       App.showView('Auth');
       return;
     }
@@ -13,8 +15,8 @@
       const data = await App.apiFetch('/api/auth/me');
       App.state.user = data.user;
       App.updateHeaderUserDisplay();
-      document.getElementById('appHeader').classList.remove('hidden');
-      document.getElementById('appNav').classList.remove('hidden');
+      document.getElementById('appHeader')?.classList.remove('hidden');
+      document.getElementById('appNav')?.classList.remove('hidden');
 
       App.state.currentWeekMonday = null; // resets to today's week
       App.showView('Planner');
@@ -28,8 +30,8 @@
     App.state.token = null;
     App.state.user = null;
     localStorage.removeItem('token');
-    document.getElementById('appHeader').classList.add('hidden');
-    document.getElementById('appNav').classList.add('hidden');
+    document.getElementById('appHeader')?.classList.add('hidden');
+    document.getElementById('appNav')?.classList.add('hidden');
     App.showView('Auth');
   }
 

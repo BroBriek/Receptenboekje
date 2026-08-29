@@ -139,9 +139,10 @@ async function apiFetch(endpoint, options = {}) {
   }
 }
 
-// ── AUTHENTICATION ────────────────────────────────────────────────────────────
 async function checkAuth() {
   if (!state.token) {
+    document.getElementById('appHeader')?.classList.add('hidden');
+    document.getElementById('appNav')?.classList.add('hidden');
     showView('Auth');
     return;
   }
@@ -150,8 +151,8 @@ async function checkAuth() {
     const data = await apiFetch('/api/auth/me');
     state.user = data.user;
     updateHeaderUserDisplay();
-    document.getElementById('appHeader').classList.remove('hidden');
-    document.getElementById('appNav').classList.remove('hidden');
+    document.getElementById('appHeader')?.classList.remove('hidden');
+    document.getElementById('appNav')?.classList.remove('hidden');
 
     state.currentWeekMonday = null; // resets to today's week
     showView('Planner');
@@ -165,8 +166,8 @@ function logout() {
   state.token = null;
   state.user = null;
   localStorage.removeItem('token');
-  document.getElementById('appHeader').classList.add('hidden');
-  document.getElementById('appNav').classList.add('hidden');
+  document.getElementById('appHeader')?.classList.add('hidden');
+  document.getElementById('appNav')?.classList.add('hidden');
   showView('Auth');
 }
 
@@ -200,7 +201,21 @@ document.getElementById('headerSettingsBtn')?.addEventListener('click', () => sh
 
 // ── VIEW ROUTING ──────────────────────────────────────────────────────────────
 function showView(viewName) {
+  if (!state.token) {
+    viewName = 'Auth';
+  }
   state.currentView = viewName;
+
+  const appHeader = document.getElementById('appHeader');
+  const appNav = document.getElementById('appNav');
+  if (!state.token || viewName === 'Auth') {
+    if (appHeader) appHeader.classList.add('hidden');
+    if (appNav) appNav.classList.add('hidden');
+  } else {
+    if (appHeader) appHeader.classList.remove('hidden');
+    if (appNav) appNav.classList.remove('hidden');
+  }
+
   // Hide all views
   document.querySelectorAll('.view-section').forEach(view => view.classList.add('hidden'));
   

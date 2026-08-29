@@ -4,7 +4,36 @@
 (function(App) {
 
   function showView(viewName) {
+    // If not logged in, enforce Auth view
+    if (!App.state.token) {
+      viewName = 'Auth';
+    }
+
+    // Role / permission check for admin-only views
+    const adminViews = ['IngredientsManage', 'Tags', 'Users'];
+    if (adminViews.includes(viewName)) {
+      const isAdmin = App.state.user && (App.state.user.is_admin == 1 || App.state.user.is_admin === true);
+      if (!isAdmin) {
+        if (typeof App.showToast === 'function') {
+          App.showToast('Je hebt geen beheerdersrechten voor deze pagina.', 'error');
+        }
+        viewName = 'More';
+      }
+    }
+
     App.state.currentView = viewName;
+
+    // Ensure header and bottom nav visibility match auth & view status
+    const appHeader = document.getElementById('appHeader');
+    const appNav = document.getElementById('appNav');
+    if (!App.state.token || viewName === 'Auth') {
+      if (appHeader) appHeader.classList.add('hidden');
+      if (appNav) appNav.classList.add('hidden');
+    } else {
+      if (appHeader) appHeader.classList.remove('hidden');
+      if (appNav) appNav.classList.remove('hidden');
+    }
+
     // Hide all views
     document.querySelectorAll('.view-section').forEach(view => view.classList.add('hidden'));
     
