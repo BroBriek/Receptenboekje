@@ -7,10 +7,12 @@
  */
 
 const path   = require('path');
+const fs     = require('fs');
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 
 const UPLOADS_DIR = process.env.UPLOADS_PATH || path.resolve(__dirname, '../../uploads');
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),

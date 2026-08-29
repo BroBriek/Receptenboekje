@@ -15,31 +15,19 @@ FROM node:22-alpine AS production
 
 WORKDIR /app
 
-# Create a non-root user for security
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+# Install su-exec to securely step down from root after volume permissions are initialized
+RUN apk add --no-cache su-exec
 
 # Copy built node_modules from deps stage
-COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps --chown=node:node /app/node_modules ./node_modules
 
 # Copy application source
-COPY src/ ./src/
-COPY package.json ./
+COPY --chown=node:node src/ ./src/
+COPY --chown=node:node package.json ./
 
-# ── Volume mount points ────────────────────────────────────────────────────────
-# These directories are declared as mount points so Docker Compose (or a plain
-# `docker run -v`) can bind-mount host directories here.  Data is therefore
-# never stored inside the container layer and survives image rebuilds.
-
-# /app/data     → SQLite database file
-# /app/uploads  → User-uploaded recipe images
-
-RUN mkdir -p /app/data /app/uploads \
-    && chown -R appuser:appgroup /app/data /app/uploads
-
-VOLUME ["/app/data", "/app/uploads"]
-
-# Drop to non-root user
-USER appuser
+# Copy entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Expose the default application port (override via PORT env var)
 EXPOSE 3000
@@ -49,5 +37,5 @@ ENV NODE_ENV=production \
     UPLOADS_PATH=/app/uploads \
     PORT=3000
 
-# Run migrations then start the server
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["sh", "-c", "node src/db/migrate.js && node src/server.js"]

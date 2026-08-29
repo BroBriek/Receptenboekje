@@ -19,8 +19,9 @@ services:
     volumes:
       # Bind-mount host directories so data persists across rebuilds.
       # The host paths (./data, ./uploads) are relative to this compose file.
-      - ./data:/app/data
-      - ./uploads:/app/uploads
+      # The ':z' flag applies the SELinux label for compatibility with SELinux-enforcing hosts.
+      - ./data:/app/data:z
+      - ./uploads:/app/uploads:z
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
       interval: 30s
