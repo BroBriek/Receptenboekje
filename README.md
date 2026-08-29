@@ -66,6 +66,15 @@ npm run dev
 
 The server will be available at **http://localhost:8080**.
 
+### Default Admin Account
+
+Upon running database migrations on a new installation, a default administrator account is initialized:
+
+- **Username:** `admin`
+- **Password:** `admin`
+
+> **Note:** It is strongly recommended to change the admin password or create a personal account after initial setup.
+
 ---
 
 ## Docker Deployment

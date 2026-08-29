@@ -139,10 +139,10 @@ const migrations = [
       const userCount = db.prepare('SELECT COUNT(*) AS count FROM users').get().count;
       if (userCount === 0) {
         const adminId = crypto.randomUUID ? crypto.randomUUID() : 'admin-uuid-12345';
-        const adminPasswordHash = hashPassword('admin123');
+        const adminPasswordHash = hashPassword('admin');
         db.prepare('INSERT INTO users (id, username, password, is_admin) VALUES (?, ?, ?, 1)')
           .run(adminId, 'admin', adminPasswordHash);
-        console.log(' Default admin user created (username: admin, password: admin123)');
+        console.log(' Default admin user created (username: admin, password: admin)');
       }
     },
   },
@@ -257,6 +257,19 @@ const migrations = [
           db.prepare('DELETE FROM tags WHERE id = ?').run(duplicate.id);
         }
         db.prepare('UPDATE tags SET name = ? WHERE id = ?').run(formatted, canonical.id);
+      }
+    },
+  },
+  {
+    name: '006_default_admin_user',
+    up: () => {
+      const existingAdmin = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
+      if (!existingAdmin) {
+        const adminId = crypto.randomUUID ? crypto.randomUUID() : 'admin-uuid-12345';
+        const adminPasswordHash = hashPassword('admin');
+        db.prepare('INSERT INTO users (id, username, password, is_admin) VALUES (?, ?, ?, 1)')
+          .run(adminId, 'admin', adminPasswordHash);
+        console.log(' Default admin user created (username: admin, password: admin)');
       }
     },
   },
