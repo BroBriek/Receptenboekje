@@ -196,7 +196,7 @@
           <h4>Geen maaltijden gepland voor deze week</h4>
           <p>Er zijn voor de geselecteerde week nog geen recepten ingepland op het weekmenu.</p>
           <button type="button" class="btn btn-primary btn-sm" data-close-modal="shoppingListModal" onclick="document.getElementById('openGenerateModalBtn')?.click()">
-            <i data-lucide="wand-2"></i> Maak een weekmenu
+            <i data-lucide="calendar-plus"></i> Maak een weekmenu
           </button>
         </div>
       `;

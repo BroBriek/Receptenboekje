@@ -574,6 +574,56 @@ router.put('/:id', requireAuth, upload.single('image'), (req, res) => {
   }
 });
 
+// PATCH /api/recipes/:id/steps - Update recipe steps directly
+router.patch('/:id/steps', requireAuth, (req, res) => {
+  const recipeId = req.params.id;
+  const { steps } = req.body;
+
+  if (!Array.isArray(steps)) {
+    return res.status(400).json({ error: 'Stappen moeten een lijst zijn.' });
+  }
+
+  const recipe = db.prepare('SELECT id FROM recipes WHERE id = ?').get(recipeId);
+  if (!recipe) {
+    return res.status(404).json({ error: 'Recept niet gevonden.' });
+  }
+
+  const updateStepsTransaction = db.transaction(() => {
+    db.prepare('DELETE FROM recipe_steps WHERE recipe_id = ?').run(recipeId);
+    const insertStep = db.prepare(`
+      INSERT INTO recipe_steps (recipe_id, step_number, instruction, timer_seconds)
+      VALUES (?, ?, ?, ?)
+    `);
+    steps.forEach((step, index) => {
+      if (!step.instruction || !step.instruction.trim()) return;
+      let timerSec = null;
+      if (step.timer_seconds !== undefined && step.timer_seconds !== null && step.timer_seconds !== '') {
+        const parsed = parseInt(step.timer_seconds, 10);
+        if (!isNaN(parsed) && parsed > 0) timerSec = parsed;
+      } else if (step.timer_minutes !== undefined && step.timer_minutes !== null && step.timer_minutes !== '') {
+        const parsedMin = parseFloat(step.timer_minutes);
+        if (!isNaN(parsedMin) && parsedMin > 0) timerSec = Math.round(parsedMin * 60);
+      }
+      insertStep.run(recipeId, index + 1, step.instruction.trim(), timerSec);
+    });
+    db.prepare("UPDATE recipes SET updated_at = datetime('now') WHERE id = ?").run(recipeId);
+  });
+
+  try {
+    updateStepsTransaction();
+    const updatedSteps = db.prepare(`
+      SELECT step_number, instruction, timer_seconds
+      FROM recipe_steps
+      WHERE recipe_id = ?
+      ORDER BY step_number ASC
+    `).all(recipeId);
+    res.json({ message: 'Bereidingsstappen succesvol bijgewerkt!', steps: updatedSteps });
+  } catch (err) {
+    console.error('Database update steps error:', err);
+    res.status(500).json({ error: 'Er is een fout opgetreden bij het bijwerken van de bereidingsstappen.' });
+  }
+});
+
 // DELETE /api/recipes/:id - Delete recipe
 router.delete('/:id', requireAuth, (req, res) => {
   const recipeId = req.params.id;

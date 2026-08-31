@@ -10,6 +10,7 @@
     App.state.recipeFormIngredients = [];
     App.state.recipeFormSteps = [];
     App.state.recipeFormSelectedTagIds = new Set();
+    editingStepIndex = null;
     
     document.getElementById('recipeFormTitle').textContent = 'Nieuw Recept Toevoegen';
     document.getElementById('recipeForm').reset();
@@ -48,6 +49,7 @@
 
   async function openEditRecipeForm(recipe) {
     App.state.currentEditingRecipeId = recipe.id;
+    editingStepIndex = null;
     App.state.recipeFormIngredients = recipe.ingredients.map(i => ({
       name: i.name,
       quantity: i.quantity,
@@ -415,6 +417,7 @@
   const stepTimerAutoSuggestionText = document.getElementById('stepTimerAutoSuggestionText');
 
   let detectedSecForStep = null;
+  let editingStepIndex = null;
 
   if (stepTextEl) {
     stepTextEl.addEventListener('input', () => {
@@ -483,26 +486,149 @@
     const list = document.getElementById('addedStepsList');
     if (!list) return;
     list.innerHTML = '';
+    const totalSteps = App.state.recipeFormSteps.length;
+
     App.state.recipeFormSteps.forEach((step, index) => {
       const li = document.createElement('li');
-      let timerBadge = '';
-      if (step.timer_seconds && step.timer_seconds > 0) {
-        const badgeText = App.formatTimerBadgeText(step.timer_seconds);
-        timerBadge = `<span class="step-timer-tag" title="Kookwekker: ${badgeText}"><i data-lucide="timer"></i> ${badgeText}</span>`;
+      li.className = 'added-step-item';
+      li.setAttribute('data-step-index', index);
+
+      if (editingStepIndex === index) {
+        li.classList.add('step-editing');
+        const timerMinutesVal = (step.timer_seconds && step.timer_seconds > 0)
+          ? (Math.round((step.timer_seconds / 60) * 100) / 100).toString()
+          : '';
+        const detectedSec = App.detectTimerInText(step.instruction);
+
+        li.innerHTML = `
+          <div class="step-edit-form">
+            <div class="step-edit-header">
+              <span class="step-edit-title">Stap ${index + 1} bewerken</span>
+              <span style="font-size:0.75rem; color:var(--text-muted);">Ctrl+Enter om op te slaan, Esc om te annuleren</span>
+            </div>
+            <textarea class="step-edit-textarea" rows="3" placeholder="Beschrijf deze stap...">${App.escapeHtml(step.instruction)}</textarea>
+            <div class="step-edit-controls">
+              <div class="step-timer-input-wrap" title="Kookwekker instellen (in minuten)">
+                <i data-lucide="timer"></i>
+                <input type="number" class="step-edit-timer-input" min="0" step="any" value="${timerMinutesVal}" placeholder="Kooktijd" aria-label="Kookwekker in minuten">
+                <span class="step-timer-unit">min</span>
+              </div>
+              <div class="step-edit-auto-suggestion ${detectedSec && !timerMinutesVal ? '' : 'hidden'}" role="button" tabindex="0" title="Klik om gedetecteerde timer in te stellen" data-detected-sec="${detectedSec || 0}">
+                <i data-lucide="sparkles" style="width:13px;height:13px;"></i>
+                <span class="step-edit-suggestion-text">${detectedSec ? App.formatTimerBadgeText(detectedSec) + ' timer' : ''}</span>
+              </div>
+              <div class="step-edit-buttons">
+                <button type="button" class="btn btn-sm btn-outline step-cancel-edit-btn" data-cancel-step="${index}" title="Annuleren (Esc)">
+                  <i data-lucide="x" style="width:14px;height:14px;"></i> Annuleren
+                </button>
+                <button type="button" class="btn btn-sm btn-primary step-save-edit-btn" data-save-step="${index}" title="Opslaan (Ctrl+Enter)">
+                  <i data-lucide="check" style="width:14px;height:14px;"></i> Opslaan
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        let timerBadge = '';
+        if (step.timer_seconds && step.timer_seconds > 0) {
+          const badgeText = App.formatTimerBadgeText(step.timer_seconds);
+          timerBadge = `<span class="step-timer-tag" title="Kookwekker: ${badgeText}"><i data-lucide="timer"></i> ${badgeText}</span>`;
+        }
+
+        li.innerHTML = `
+          <div class="step-item-content" title="Dubbelklik om deze stap te bewerken">
+            <span class="step-item-text">${App.escapeHtml(step.instruction)}</span>
+            ${timerBadge}
+          </div>
+          <div class="step-item-actions">
+            <button type="button" class="step-action-btn" data-move-step-up="${index}" title="Stap omhoog verplaatsen" aria-label="Stap omhoog" ${index === 0 ? 'disabled' : ''}>
+              <i data-lucide="chevron-up" style="width:15px;height:15px;"></i>
+            </button>
+            <button type="button" class="step-action-btn" data-move-step-down="${index}" title="Stap omlaag verplaatsen" aria-label="Stap omlaag" ${index === totalSteps - 1 ? 'disabled' : ''}>
+              <i data-lucide="chevron-down" style="width:15px;height:15px;"></i>
+            </button>
+            <button type="button" class="step-action-btn" data-edit-step="${index}" title="Stap bewerken" aria-label="Stap bewerken">
+              <i data-lucide="pencil" style="width:14px;height:14px;"></i>
+            </button>
+            <button type="button" class="step-action-btn step-remove-btn" data-remove-step="${index}" title="Stap verwijderen" aria-label="Verwijder stap">
+              <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+            </button>
+          </div>
+        `;
       }
 
-      li.innerHTML = `
-        <div style="display:flex; align-items:center; gap:0.5rem; flex:1; min-width:0; padding-right:1rem;">
-          <span style="flex:1; word-break:break-word;">${App.escapeHtml(step.instruction)}</span>
-          ${timerBadge}
-        </div>
-        <button type="button" data-remove-step="${index}" aria-label="Verwijder stap">
-          <i data-lucide="x" style="width:16px;height:16px;"></i>
-        </button>
-      `;
       list.appendChild(li);
     });
+
     if (window.lucide) lucide.createIcons();
+
+    if (editingStepIndex !== null) {
+      const activeTextarea = list.querySelector('.step-edit-textarea');
+      if (activeTextarea) {
+        activeTextarea.focus();
+        activeTextarea.setSelectionRange(activeTextarea.value.length, activeTextarea.value.length);
+      }
+    }
+  }
+
+  function saveEditedStep(index) {
+    const list = document.getElementById('addedStepsList');
+    if (!list) return;
+    const item = list.querySelector(`[data-step-index="${index}"]`);
+    if (!item) return;
+
+    const textarea = item.querySelector('.step-edit-textarea');
+    const timerInput = item.querySelector('.step-edit-timer-input');
+
+    const instruction = textarea ? textarea.value.trim() : '';
+    if (!instruction) {
+      App.showToast('Stap instructie mag niet leeg zijn!', 'error');
+      textarea?.focus();
+      return;
+    }
+
+    let timer_seconds = null;
+    if (timerInput && timerInput.value) {
+      const val = parseFloat(timerInput.value);
+      if (!isNaN(val) && val > 0) {
+        timer_seconds = Math.round(val * 60);
+      }
+    } else {
+      timer_seconds = App.detectTimerInText(instruction);
+    }
+
+    if (App.state.recipeFormSteps[index]) {
+      App.state.recipeFormSteps[index].instruction = instruction;
+      App.state.recipeFormSteps[index].timer_seconds = (timer_seconds && timer_seconds > 0) ? timer_seconds : null;
+    }
+
+    editingStepIndex = null;
+    renderRecipeFormSteps();
+  }
+
+  function cancelEditedStep() {
+    editingStepIndex = null;
+    renderRecipeFormSteps();
+  }
+
+  function moveFormStep(fromIndex, toIndex) {
+    if (fromIndex < 0 || fromIndex >= App.state.recipeFormSteps.length) return;
+    if (toIndex < 0 || toIndex >= App.state.recipeFormSteps.length) return;
+
+    const item = App.state.recipeFormSteps.splice(fromIndex, 1)[0];
+    App.state.recipeFormSteps.splice(toIndex, 0, item);
+
+    App.state.recipeFormSteps.forEach((s, idx) => {
+      s.step_number = idx + 1;
+    });
+
+    if (editingStepIndex === fromIndex) {
+      editingStepIndex = toIndex;
+    } else if (editingStepIndex !== null) {
+      editingStepIndex = null;
+    }
+
+    renderRecipeFormSteps();
   }
 
   function removeFormStep(index) {
@@ -510,14 +636,130 @@
     App.state.recipeFormSteps.forEach((s, idx) => {
       s.step_number = idx + 1;
     });
+    if (editingStepIndex === index) {
+      editingStepIndex = null;
+    } else if (editingStepIndex !== null && editingStepIndex > index) {
+      editingStepIndex--;
+    }
     renderRecipeFormSteps();
   }
 
+  // Click delegation on steps list
   document.getElementById('addedStepsList')?.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-remove-step]');
-    if (btn) {
-      const index = parseInt(btn.getAttribute('data-remove-step'), 10);
+    // Edit step button
+    const editBtn = e.target.closest('[data-edit-step]');
+    if (editBtn) {
+      const index = parseInt(editBtn.getAttribute('data-edit-step'), 10);
+      if (!isNaN(index)) {
+        editingStepIndex = index;
+        renderRecipeFormSteps();
+      }
+      return;
+    }
+
+    // Save edited step button
+    const saveBtn = e.target.closest('[data-save-step]');
+    if (saveBtn) {
+      const index = parseInt(saveBtn.getAttribute('data-save-step'), 10);
+      if (!isNaN(index)) saveEditedStep(index);
+      return;
+    }
+
+    // Cancel edit button
+    const cancelBtn = e.target.closest('[data-cancel-step]');
+    if (cancelBtn) {
+      cancelEditedStep();
+      return;
+    }
+
+    // Move step up button
+    const moveUpBtn = e.target.closest('[data-move-step-up]');
+    if (moveUpBtn) {
+      const index = parseInt(moveUpBtn.getAttribute('data-move-step-up'), 10);
+      if (!isNaN(index) && index > 0) moveFormStep(index, index - 1);
+      return;
+    }
+
+    // Move step down button
+    const moveDownBtn = e.target.closest('[data-move-step-down]');
+    if (moveDownBtn) {
+      const index = parseInt(moveDownBtn.getAttribute('data-move-step-down'), 10);
+      if (!isNaN(index) && index < App.state.recipeFormSteps.length - 1) moveFormStep(index, index + 1);
+      return;
+    }
+
+    // Remove step button
+    const removeBtn = e.target.closest('[data-remove-step]');
+    if (removeBtn) {
+      const index = parseInt(removeBtn.getAttribute('data-remove-step'), 10);
       if (!isNaN(index)) removeFormStep(index);
+      return;
+    }
+
+    // Auto suggestion chip inside inline step editor
+    const suggChip = e.target.closest('.step-edit-auto-suggestion');
+    if (suggChip) {
+      const sec = parseInt(suggChip.getAttribute('data-detected-sec'), 10);
+      const formItem = suggChip.closest('.added-step-item');
+      const timerInput = formItem?.querySelector('.step-edit-timer-input');
+      if (sec && timerInput) {
+        timerInput.value = (Math.round((sec / 60) * 100) / 100).toString();
+        suggChip.classList.add('hidden');
+        timerInput.focus();
+      }
+      return;
+    }
+  });
+
+  // Double-click on step item content to quickly edit
+  document.getElementById('addedStepsList')?.addEventListener('dblclick', (e) => {
+    const stepContent = e.target.closest('.step-item-content');
+    if (stepContent) {
+      const stepItem = stepContent.closest('.added-step-item');
+      if (stepItem) {
+        const index = parseInt(stepItem.getAttribute('data-step-index'), 10);
+        if (!isNaN(index)) {
+          editingStepIndex = index;
+          renderRecipeFormSteps();
+        }
+      }
+    }
+  });
+
+  // Real-time input and keyboard shortcuts on inline step editor
+  document.getElementById('addedStepsList')?.addEventListener('input', (e) => {
+    if (e.target.classList.contains('step-edit-textarea')) {
+      const textarea = e.target;
+      const formItem = textarea.closest('.added-step-item');
+      const suggChip = formItem?.querySelector('.step-edit-auto-suggestion');
+      const suggText = formItem?.querySelector('.step-edit-suggestion-text');
+      const timerInput = formItem?.querySelector('.step-edit-timer-input');
+
+      const detected = App.detectTimerInText(textarea.value);
+      if (detected && detected > 0 && (!timerInput || !timerInput.value)) {
+        if (suggText) suggText.textContent = `${App.formatTimerBadgeText(detected)} timer`;
+        if (suggChip) {
+          suggChip.setAttribute('data-detected-sec', detected);
+          suggChip.classList.remove('hidden');
+        }
+      } else if (suggChip) {
+        suggChip.classList.add('hidden');
+      }
+    }
+  });
+
+  document.getElementById('addedStepsList')?.addEventListener('keydown', (e) => {
+    if (e.target.classList.contains('step-edit-textarea') || e.target.classList.contains('step-edit-timer-input')) {
+      const formItem = e.target.closest('.added-step-item');
+      const index = formItem ? parseInt(formItem.getAttribute('data-step-index'), 10) : null;
+
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        cancelEditedStep();
+      } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey || e.target.classList.contains('step-edit-timer-input'))) {
+        e.preventDefault();
+        if (index !== null && !isNaN(index)) saveEditedStep(index);
+      }
     }
   });
 
