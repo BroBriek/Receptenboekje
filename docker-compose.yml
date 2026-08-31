@@ -7,6 +7,9 @@ services:
     image: receptenboekje:latest
     container_name: receptenboekje
     restart: unless-stopped
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     ports:
       - "${PORT:-3001}:3001"
     environment:
