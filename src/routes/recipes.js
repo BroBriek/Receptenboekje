@@ -14,10 +14,11 @@ const UPLOADS_DIR = process.env.UPLOADS_PATH || path.resolve(__dirname, '../../u
 
 // Helper to delete an image file (never deletes stock library images)
 function deleteImage(filename) {
-  if (!filename) return;
+  if (!filename || typeof filename !== 'string') return;
   if (filename.startsWith('stock/') || filename.startsWith('stock\\')) return;
   try {
-    const absolutePath = path.join(UPLOADS_DIR, filename);
+    const safeFilename = path.basename(filename);
+    const absolutePath = path.join(UPLOADS_DIR, safeFilename);
     if (fs.existsSync(absolutePath)) {
       fs.unlinkSync(absolutePath);
     }
@@ -32,6 +33,20 @@ function formatItemName(str) {
   const trimmed = str.trim();
   if (!trimmed) return '';
   return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+}
+
+function parseQuantity(val) {
+  if (val === undefined || val === null || val === '') return null;
+  if (typeof val === 'number') return isNaN(val) ? null : val;
+  const cleaned = String(val).trim().replace(',', '.');
+  const parsed = parseFloat(cleaned);
+  return isNaN(parsed) ? null : parsed;
+}
+
+function parseNullableInt(val) {
+  if (val === undefined || val === null || val === '') return null;
+  const parsed = parseInt(val, 10);
+  return isNaN(parsed) ? null : parsed;
 }
 
 
@@ -229,7 +244,7 @@ router.get('/:id', requireAuth, (req, res) => {
 
     // Get ingredients
     recipe.ingredients = db.prepare(`
-      SELECT ri.id, i.name, ri.quantity, ri.unit, ri.notes
+      SELECT ri.id, i.id AS ingredient_id, i.name, ri.quantity, ri.unit, ri.notes
       FROM recipe_ingredients ri
       JOIN ingredients i ON ri.ingredient_id = i.id
       WHERE ri.recipe_id = ?
@@ -298,9 +313,9 @@ router.post('/', requireAuth, upload.single('image'), (req, res) => {
       userId,
       title.trim(),
       description ? description.trim() : null,
-      servings ? parseInt(servings, 10) : null,
-      prep_time ? parseInt(prep_time, 10) : null,
-      cook_time ? parseInt(cook_time, 10) : null,
+      parseNullableInt(servings),
+      parseNullableInt(prep_time),
+      parseNullableInt(cook_time),
       imagePath,
       isExcludedFromMenu
     );
@@ -308,6 +323,7 @@ router.post('/', requireAuth, upload.single('image'), (req, res) => {
     // 2. Handle tags (supports IDs, strings, objects with case-insensitive check)
     if (tags && tags.length > 0) {
       const insertTagLink = db.prepare('INSERT OR IGNORE INTO recipe_tags (recipe_id, tag_id) VALUES (?, ?)');
+      const checkTagExists = db.prepare('SELECT id FROM tags WHERE id = ?');
       const getTagByLower = db.prepare('SELECT id FROM tags WHERE LOWER(name) = LOWER(?)');
       const insertTag = db.prepare('INSERT INTO tags (name) VALUES (?)');
 
@@ -329,7 +345,10 @@ router.post('/', requireAuth, upload.single('image'), (req, res) => {
         }
 
         if (tagId) {
-          insertTagLink.run(recipeId, tagId);
+          const tagExists = checkTagExists.get(tagId);
+          if (tagExists) {
+            insertTagLink.run(recipeId, tagId);
+          }
         }
       }
     }
@@ -343,7 +362,8 @@ router.post('/', requireAuth, upload.single('image'), (req, res) => {
         VALUES (?, ?, ?, ?, ?, ?)
       `);
 
-      ingredients.forEach((ing, index) => {
+      let ingSortOrder = 0;
+      ingredients.forEach((ing) => {
         if (!ing.name || !ing.name.trim()) return;
         const nameClean = formatItemName(ing.name);
 
@@ -360,10 +380,10 @@ router.post('/', requireAuth, upload.single('image'), (req, res) => {
         insertRecipeIngredient.run(
           recipeId,
           ingredientId,
-          ing.quantity ? parseFloat(ing.quantity) : null,
+          parseQuantity(ing.quantity),
           ing.unit ? ing.unit.trim() : null,
           ing.notes ? ing.notes.trim() : null,
-          index
+          ingSortOrder++
         );
       });
     }
@@ -374,7 +394,8 @@ router.post('/', requireAuth, upload.single('image'), (req, res) => {
         INSERT INTO recipe_steps (recipe_id, step_number, instruction, timer_seconds)
         VALUES (?, ?, ?, ?)
       `);
-      steps.forEach((step, index) => {
+      let stepNumber = 1;
+      steps.forEach((step) => {
         if (!step.instruction || !step.instruction.trim()) return;
         let timerSec = null;
         if (step.timer_seconds !== undefined && step.timer_seconds !== null && step.timer_seconds !== '') {
@@ -384,7 +405,7 @@ router.post('/', requireAuth, upload.single('image'), (req, res) => {
           const parsedMin = parseFloat(step.timer_minutes);
           if (!isNaN(parsedMin) && parsedMin > 0) timerSec = Math.round(parsedMin * 60);
         }
-        insertStep.run(recipeId, index + 1, step.instruction.trim(), timerSec);
+        insertStep.run(recipeId, stepNumber++, step.instruction.trim(), timerSec);
       });
     }
   });
@@ -466,9 +487,9 @@ router.put('/:id', requireAuth, upload.single('image'), (req, res) => {
     `).run(
       title.trim(),
       description ? description.trim() : null,
-      servings ? parseInt(servings, 10) : null,
-      prep_time ? parseInt(prep_time, 10) : null,
-      cook_time ? parseInt(cook_time, 10) : null,
+      parseNullableInt(servings),
+      parseNullableInt(prep_time),
+      parseNullableInt(cook_time),
       newImagePath,
       isExcludedFromMenu,
       recipeId
@@ -482,6 +503,7 @@ router.put('/:id', requireAuth, upload.single('image'), (req, res) => {
     // 3. Re-insert tags (supports IDs, strings, objects with case-insensitive check)
     if (tags && tags.length > 0) {
       const insertTagLink = db.prepare('INSERT OR IGNORE INTO recipe_tags (recipe_id, tag_id) VALUES (?, ?)');
+      const checkTagExists = db.prepare('SELECT id FROM tags WHERE id = ?');
       const getTagByLower = db.prepare('SELECT id FROM tags WHERE LOWER(name) = LOWER(?)');
       const insertTag = db.prepare('INSERT INTO tags (name) VALUES (?)');
 
@@ -503,7 +525,10 @@ router.put('/:id', requireAuth, upload.single('image'), (req, res) => {
         }
 
         if (tagId) {
-          insertTagLink.run(recipeId, tagId);
+          const tagExists = checkTagExists.get(tagId);
+          if (tagExists) {
+            insertTagLink.run(recipeId, tagId);
+          }
         }
       }
     }
@@ -517,7 +542,8 @@ router.put('/:id', requireAuth, upload.single('image'), (req, res) => {
         VALUES (?, ?, ?, ?, ?, ?)
       `);
 
-      ingredients.forEach((ing, index) => {
+      let ingSortOrder = 0;
+      ingredients.forEach((ing) => {
         if (!ing.name || !ing.name.trim()) return;
         const nameClean = formatItemName(ing.name);
 
@@ -534,10 +560,10 @@ router.put('/:id', requireAuth, upload.single('image'), (req, res) => {
         insertRecipeIngredient.run(
           recipeId,
           ingredientId,
-          ing.quantity ? parseFloat(ing.quantity) : null,
+          parseQuantity(ing.quantity),
           ing.unit ? ing.unit.trim() : null,
           ing.notes ? ing.notes.trim() : null,
-          index
+          ingSortOrder++
         );
       });
     }
@@ -548,7 +574,8 @@ router.put('/:id', requireAuth, upload.single('image'), (req, res) => {
         INSERT INTO recipe_steps (recipe_id, step_number, instruction, timer_seconds)
         VALUES (?, ?, ?, ?)
       `);
-      steps.forEach((step, index) => {
+      let stepNumber = 1;
+      steps.forEach((step) => {
         if (!step.instruction || !step.instruction.trim()) return;
         let timerSec = null;
         if (step.timer_seconds !== undefined && step.timer_seconds !== null && step.timer_seconds !== '') {
@@ -558,7 +585,7 @@ router.put('/:id', requireAuth, upload.single('image'), (req, res) => {
           const parsedMin = parseFloat(step.timer_minutes);
           if (!isNaN(parsedMin) && parsedMin > 0) timerSec = Math.round(parsedMin * 60);
         }
-        insertStep.run(recipeId, index + 1, step.instruction.trim(), timerSec);
+        insertStep.run(recipeId, stepNumber++, step.instruction.trim(), timerSec);
       });
     }
   });
@@ -594,7 +621,8 @@ router.patch('/:id/steps', requireAuth, (req, res) => {
       INSERT INTO recipe_steps (recipe_id, step_number, instruction, timer_seconds)
       VALUES (?, ?, ?, ?)
     `);
-    steps.forEach((step, index) => {
+    let stepNumber = 1;
+    steps.forEach((step) => {
       if (!step.instruction || !step.instruction.trim()) return;
       let timerSec = null;
       if (step.timer_seconds !== undefined && step.timer_seconds !== null && step.timer_seconds !== '') {
@@ -604,7 +632,7 @@ router.patch('/:id/steps', requireAuth, (req, res) => {
         const parsedMin = parseFloat(step.timer_minutes);
         if (!isNaN(parsedMin) && parsedMin > 0) timerSec = Math.round(parsedMin * 60);
       }
-      insertStep.run(recipeId, index + 1, step.instruction.trim(), timerSec);
+      insertStep.run(recipeId, stepNumber++, step.instruction.trim(), timerSec);
     });
     db.prepare("UPDATE recipes SET updated_at = datetime('now') WHERE id = ?").run(recipeId);
   });

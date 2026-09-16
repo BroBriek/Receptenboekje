@@ -654,14 +654,15 @@
         displayQty = ing.quantity;
       }
 
-      const unit = ing.unit ? ing.unit : '';
-      const notes = ing.notes ? `(${ing.notes})` : '';
-      const qtyUnit = (displayQty || unit) ? `<strong>${displayQty} ${unit}</strong> ` : '';
+      const unit = ing.unit ? App.escapeHtml(ing.unit) : '';
+      const notes = ing.notes ? `(${App.escapeHtml(ing.notes)})` : '';
+      const safeQty = displayQty ? App.escapeHtml(String(displayQty)) : '';
+      const qtyUnit = (safeQty || unit) ? `<strong>${safeQty} ${unit}</strong> ` : '';
 
       return `
         <li class="cooking-drawer-item ${isChecked ? 'checked' : ''}" data-toggle-ingredient="${idx}">
           <input type="checkbox" class="cooking-drawer-checkbox" ${isChecked ? 'checked' : ''} tabindex="-1">
-          <span class="cooking-drawer-text">${qtyUnit}${App.escapeHtml(ing.name)} ${App.escapeHtml(notes)}</span>
+          <span class="cooking-drawer-text">${qtyUnit}${App.escapeHtml(ing.name)} ${notes}</span>
         </li>
       `;
     }).join('');

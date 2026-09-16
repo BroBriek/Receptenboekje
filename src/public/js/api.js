@@ -28,7 +28,18 @@
 
     try {
       const response = await fetch(endpoint, config);
-      const data = await response.json();
+      let data = {};
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        try {
+          data = JSON.parse(text);
+        } catch {
+          data = { error: text || `Serverfout (${response.status})` };
+        }
+      }
 
       if (!response.ok) {
         if (response.status === 401) {

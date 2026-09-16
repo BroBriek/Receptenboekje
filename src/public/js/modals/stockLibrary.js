@@ -492,7 +492,7 @@
   }
 
   // ── BIND EVENT LISTENERS ───────────────────────────────────────────────────────
-  document.addEventListener('DOMContentLoaded', () => {
+  function initStockLibrary() {
     // Open modal button
     document.addEventListener('click', (e) => {
       const openBtn = e.target.closest('#openStockModalBtn');
@@ -664,7 +664,13 @@
     document.getElementById('retryOnlineSearchBtn')?.addEventListener('click', () => {
       if (onlineInput) performOnlineSearch(onlineInput.value);
     });
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initStockLibrary);
+  } else {
+    initStockLibrary();
+  }
 
   // Attach module method
   App.openStockLibraryModal = openStockLibraryModal;

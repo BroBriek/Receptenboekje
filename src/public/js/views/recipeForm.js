@@ -50,7 +50,7 @@
   async function openEditRecipeForm(recipe) {
     App.state.currentEditingRecipeId = recipe.id;
     editingStepIndex = null;
-    App.state.recipeFormIngredients = recipe.ingredients.map(i => ({
+    App.state.recipeFormIngredients = (recipe.ingredients || []).map(i => ({
       name: i.name,
       quantity: i.quantity,
       unit: i.unit,
@@ -61,7 +61,7 @@
       instruction: s.instruction,
       timer_seconds: (s.timer_seconds && s.timer_seconds > 0) ? s.timer_seconds : App.detectTimerInText(s.instruction)
     }));
-    App.state.recipeFormSelectedTagIds = new Set(recipe.tags.map(t => t.id));
+    App.state.recipeFormSelectedTagIds = new Set((recipe.tags || []).map(t => t.id));
 
     const timerInput = document.getElementById('stepTimerMinutes');
     if (timerInput) timerInput.value = '';
@@ -345,7 +345,7 @@
     const unitEl = document.getElementById('ingUnit');
 
     const name = App.formatItemName(nameEl.value);
-    const qty = qtyEl.value ? parseFloat(qtyEl.value) : null;
+    const qty = (qtyEl.value !== '' && !isNaN(parseFloat(qtyEl.value))) ? parseFloat(qtyEl.value) : null;
     const unit = unitEl.value.trim();
 
     if (!name) {
@@ -853,6 +853,15 @@
   document.getElementById('recipeForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
 
+    // If a step is currently being edited inline, save it before submitting
+    if (editingStepIndex !== null) {
+      saveEditedStep(editingStepIndex);
+      if (editingStepIndex !== null) {
+        // Validation failed in saveEditedStep
+        return;
+      }
+    }
+
     const title = document.getElementById('recipeTitleInput').value.trim();
     const description = document.getElementById('recipeDescInput').value.trim();
     const servings = document.getElementById('recipeServingsInput').value;
@@ -866,9 +875,9 @@
     const formData = new FormData();
     formData.append('title', title);
     formData.append('description', description);
-    if (servings) formData.append('servings', servings);
-    if (prep_time) formData.append('prep_time', prep_time);
-    if (cook_time) formData.append('cook_time', cook_time);
+    formData.append('servings', servings || '');
+    formData.append('prep_time', prep_time || '');
+    formData.append('cook_time', cook_time || '');
     formData.append('exclude_from_menu', excludeFromMenu);
     
     formData.append('tags', JSON.stringify(selectedTagIds));

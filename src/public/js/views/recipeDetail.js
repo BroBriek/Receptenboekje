@@ -36,10 +36,11 @@
           displayQty = ing.quantity;
         }
 
-        const unit = ing.unit ? ing.unit : '';
-        const notes = ing.notes ? `(${ing.notes})` : '';
-        const qtyUnit = (displayQty || unit) ? `<strong>${displayQty} ${unit}</strong> ` : '';
-        return `<li>${qtyUnit}${App.escapeHtml(ing.name)} ${App.escapeHtml(notes)}</li>`;
+        const unit = ing.unit ? App.escapeHtml(ing.unit) : '';
+        const notes = ing.notes ? `(${App.escapeHtml(ing.notes)})` : '';
+        const safeQty = displayQty ? App.escapeHtml(String(displayQty)) : '';
+        const qtyUnit = (safeQty || unit) ? `<strong>${safeQty} ${unit}</strong> ` : '';
+        return `<li>${qtyUnit}${App.escapeHtml(ing.name)} ${notes}</li>`;
       }).join('');
     } else {
       ingList.innerHTML = '<li style="font-style:italic; border-left-color: var(--border);">Geen ingrediënten ingevoerd.</li>';

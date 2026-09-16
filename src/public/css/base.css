@@ -11,7 +11,7 @@ html {
 
 html, body {
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* ── MODAL BACKGROUND SCROLL LOCK ─────────────────────────────────────────── */
@@ -83,7 +83,8 @@ img {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  padding-bottom: calc(var(--nav-height) + 2rem); /* Keep ample space for fixed bottom nav */
+  min-height: 100dvh;
+  padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px) + 2rem); /* Keep ample space for fixed bottom nav */
 }
 
 .main-content {

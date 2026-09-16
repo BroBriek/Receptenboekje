@@ -291,7 +291,11 @@
   bottom: 0;
   left: 0;
   right: 0;
-  height: var(--nav-height);
+  width: 100%;
+  max-width: 100vw;
+  box-sizing: border-box;
+  height: calc(var(--nav-height) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -301,7 +305,11 @@
   justify-content: space-around;
   align-items: center;
   z-index: 1000;
-  max-width: 100vw;
+  /* Hardware composite layer to prevent mobile momentum scroll detachment */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: transform;
+  touch-action: manipulation;
 }
 
 .nav-item {

@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Ons Receptenboekje - Wekelijkse Planner & Recepten</title>
   <meta name="description" content="Bewaar je favoriete recepten en plan je weekmenu eenvoudig met deze gezellige kookplanner.">
   <meta name="theme-color" content="#ffffff">
@@ -866,28 +866,27 @@
       </section>
 
     </main>
-
-    <!-- Always Sticky Bottom Navigation Bar -->
-    <nav id="appNav" class="app-nav hidden" aria-label="Hoofdnavigatie">
-      <button id="navPlanner" class="nav-item active" data-view="Planner">
-        <i data-lucide="calendar"></i>
-        <span>Planning</span>
-      </button>
-      <button id="navRecipes" class="nav-item" data-view="Recipes">
-        <i data-lucide="book-open"></i>
-        <span>Recepten</span>
-      </button>
-      <button id="navIngredients" class="nav-item" data-view="Ingredients">
-        <i data-lucide="apple"></i>
-        <span>Ingrediënten</span>
-      </button>
-      <button id="navMore" class="nav-item" data-view="More">
-        <i data-lucide="grid"></i>
-        <span>Meer</span>
-      </button>
-    </nav>
-
   </div>
+
+  <!-- Always Fixed Bottom Navigation Bar -->
+  <nav id="appNav" class="app-nav hidden" aria-label="Hoofdnavigatie">
+    <button id="navPlanner" class="nav-item active" data-view="Planner">
+      <i data-lucide="calendar"></i>
+      <span>Planning</span>
+    </button>
+    <button id="navRecipes" class="nav-item" data-view="Recipes">
+      <i data-lucide="book-open"></i>
+      <span>Recepten</span>
+    </button>
+    <button id="navIngredients" class="nav-item" data-view="Ingredients">
+      <i data-lucide="apple"></i>
+      <span>Ingrediënten</span>
+    </button>
+    <button id="navMore" class="nav-item" data-view="More">
+      <i data-lucide="grid"></i>
+      <span>Meer</span>
+    </button>
+  </nav>
 
 
   <!-- ── MODAL: GENERATE WEEK MENU SETTINGS & CONFIRMATION ── -->
