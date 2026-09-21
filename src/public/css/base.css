@@ -15,9 +15,8 @@ html, body {
 }
 
 /* ── MODAL BACKGROUND SCROLL LOCK ─────────────────────────────────────────── */
-html:has(dialog[open]),
 body:has(dialog[open]) {
-  overflow: hidden !important;
+  overflow-y: hidden;
   overscroll-behavior: none;
 }
 

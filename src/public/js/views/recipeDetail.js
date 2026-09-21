@@ -99,9 +99,11 @@
 
       // Tags
       const tagsContainer = document.getElementById('recipeDetailTags');
-      tagsContainer.innerHTML = recipe.tags.map(tag => `
-        <span class="recipe-card-tag">${App.escapeHtml(tag.name)}</span>
-      `).join('');
+      if (tagsContainer) {
+        tagsContainer.innerHTML = (recipe.tags || []).map(tag => `
+          <span class="recipe-card-tag">${App.escapeHtml(tag.name)}</span>
+        `).join('');
+      }
 
       // Author
       const authorContainer = document.getElementById('recipeDetailAuthorContainer');
