@@ -21,6 +21,21 @@ const morgan  = require('morgan');
 
 const app = express();
 
+// Helper to determine CSP frame-ancestors directive.
+// If FRAME_ANCESTORS is set, parses domains/origins; otherwise null allows embedding anywhere.
+const getFrameAncestors = () => {
+  if (!process.env.FRAME_ANCESTORS) return null;
+  return process.env.FRAME_ANCESTORS
+    .split(/[\s,]+/)
+    .map(s => s.trim())
+    .filter(Boolean)
+    .map(s => {
+      if (s === 'self' || s === "'self'") return "'self'";
+      if (s === 'none' || s === "'none'") return "'none'";
+      return s;
+    });
+};
+
 // Security & logging middleware
 app.use(helmet({
   contentSecurityPolicy: {
@@ -33,11 +48,12 @@ app.use(helmet({
       imgSrc: ["'self'", "data:", "blob:"],
       connectSrc: ["'self'"],
       formAction: ["'self'"],
-      frameAncestors: ["'self'"],
+      frameAncestors: getFrameAncestors(),
       objectSrc: ["'none'"],
       upgradeInsecureRequests: null
     }
   },
+  xFrameOptions: false,
   hsts: false
 }));
 app.use(cors());

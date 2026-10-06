@@ -19,6 +19,7 @@ services:
       UPLOADS_PATH: /app/uploads
       # Override SESSION_SECRET in a .env file or via environment
       SESSION_SECRET: ${SESSION_SECRET:-change-me-in-production}
+      FRAME_ANCESTORS: ${FRAME_ANCESTORS:-}
     volumes:
       # Bind-mount host directories so data persists across rebuilds.
       # The host paths (./data, ./uploads) are relative to this compose file.
