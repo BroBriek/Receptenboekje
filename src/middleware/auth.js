@@ -29,19 +29,81 @@ function verifyPassword(password, stored) {
 
 /**
  * Generate a JWT token.
+ * @param {object} payload - Token payload (id, username, is_admin)
+ * @param {boolean} [stayLoggedIn=false] - Whether user requested to stay logged in
  */
-function generateToken(payload) {
+function generateToken(payload, stayLoggedIn = false) {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
   
-  // Add expiration (7 days)
-  const exp = Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60);
-  const body = Buffer.from(JSON.stringify({ ...payload, exp })).toString('base64url');
+  // 30 days if stayLoggedIn, 24 hours if session-based
+  const durationInSeconds = stayLoggedIn ? (30 * 24 * 60 * 60) : (24 * 60 * 60);
+  const exp = Math.floor(Date.now() / 1000) + durationInSeconds;
+  const body = Buffer.from(JSON.stringify({
+    ...payload,
+    stay_logged_in: !!stayLoggedIn,
+    exp
+  })).toString('base64url');
   
   const signature = crypto.createHmac('sha256', JWT_SECRET)
     .update(`${header}.${body}`)
     .digest('base64url');
     
   return `${header}.${body}.${signature}`;
+}
+
+/**
+ * Parse cookies from Cookie header reliably.
+ */
+function parseCookies(cookieHeader) {
+  const cookies = {};
+  if (!cookieHeader) return cookies;
+  const pairs = cookieHeader.split(';');
+  for (const pair of pairs) {
+    const idx = pair.indexOf('=');
+    if (idx < 0) continue;
+    const key = pair.substring(0, idx).trim();
+    const val = pair.substring(idx + 1).trim();
+    if (!key) continue;
+    try {
+      cookies[key] = decodeURIComponent(val);
+    } catch {
+      cookies[key] = val;
+    }
+  }
+  return cookies;
+}
+
+/**
+ * Set authentication cookie with proper security and persistence flags.
+ */
+function setTokenCookie(res, req, token, stayLoggedIn = false) {
+  const isHttps = req ? (req.secure || req.headers['x-forwarded-proto'] === 'https') : false;
+  const options = {
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/',
+    secure: !!isHttps
+  };
+
+  if (stayLoggedIn) {
+    // 30 days in milliseconds
+    options.maxAge = 30 * 24 * 60 * 60 * 1000;
+  }
+
+  res.cookie('token', token, options);
+}
+
+/**
+ * Clear authentication cookie.
+ */
+function clearTokenCookie(res, req) {
+  const isHttps = req ? (req.secure || req.headers['x-forwarded-proto'] === 'https') : false;
+  res.clearCookie('token', {
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/',
+    secure: !!isHttps
+  });
 }
 
 /**
@@ -78,19 +140,15 @@ function verifyToken(token) {
 function requireAuth(req, res, next) {
   let token = null;
 
-  // Try Authorization header
+  // 1. Try Authorization header
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     token = authHeader.substring(7);
   }
 
-  // Try cookie if no header
+  // 2. Try cookie if no header
   if (!token && req.headers.cookie) {
-    const cookies = req.headers.cookie.split(';').reduce((acc, cookie) => {
-      const [key, value] = cookie.trim().split('=');
-      acc[key] = value;
-      return acc;
-    }, {});
+    const cookies = parseCookies(req.headers.cookie);
     token = cookies.token;
   }
 
@@ -103,10 +161,13 @@ function requireAuth(req, res, next) {
     return res.status(401).json({ error: 'Sessie verlopen of ongeldig token. Log opnieuw in.' });
   }
 
+  req.token = token;
   req.user = {
     id: payload.id,
     username: payload.username,
-    is_admin: payload.is_admin ? 1 : 0
+    is_admin: payload.is_admin ? 1 : 0,
+    stay_logged_in: !!payload.stay_logged_in,
+    exp: payload.exp
   };
   
   next();
@@ -117,5 +178,8 @@ module.exports = {
   verifyPassword,
   generateToken,
   verifyToken,
+  setTokenCookie,
+  clearTokenCookie,
+  parseCookies,
   requireAuth
 };

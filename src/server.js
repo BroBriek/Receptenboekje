@@ -21,6 +21,9 @@ const morgan  = require('morgan');
 
 const app = express();
 
+// Trust reverse proxy (Docker, Nginx, Home Assistant ingress)
+app.set('trust proxy', 1);
+
 // Helper to determine CSP frame-ancestors directive.
 // If FRAME_ANCESTORS is set, parses domains/origins; otherwise null allows embedding anywhere.
 const getFrameAncestors = () => {
@@ -102,8 +105,10 @@ app.use((err, _req, res, _next) => {
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Receptenboekje running on http://localhost:${PORT} (${process.env.NODE_ENV || 'development'})`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Receptenboekje running on http://localhost:${PORT} (${process.env.NODE_ENV || 'development'})`);
+  });
+}
 
 module.exports = app;

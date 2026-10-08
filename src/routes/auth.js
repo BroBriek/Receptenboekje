@@ -6,7 +6,14 @@ const fs      = require('fs');
 const path    = require('path');
 const db      = require('../db/database');
 const { v4: uuidv4 } = require('uuid');
-const { hashPassword, verifyPassword, generateToken, requireAuth } = require('../middleware/auth');
+const { 
+  hashPassword, 
+  verifyPassword, 
+  generateToken, 
+  requireAuth,
+  setTokenCookie,
+  clearTokenCookie
+} = require('../middleware/auth');
 const upload  = require('../middleware/upload');
 
 const UPLOADS_DIR = process.env.UPLOADS_PATH || path.resolve(__dirname, '../../uploads');
@@ -73,6 +80,12 @@ router.post('/register', requireAuth, (req, res) => {
 // POST /api/auth/login
 router.post('/login', (req, res) => {
   const { username, password } = req.body;
+  const stayLoggedIn = req.body.stay_logged_in === true ||
+                       req.body.stay_logged_in === 'true' ||
+                       req.body.stayLoggedIn === true ||
+                       req.body.stayLoggedIn === 'true' ||
+                       req.body.remember_me === true ||
+                       req.body.remember_me === 'true';
 
   if (!username || !password) {
     return res.status(400).json({ error: 'Gebruikersnaam en wachtwoord zijn verplicht.' });
@@ -95,11 +108,15 @@ router.post('/login', (req, res) => {
       id: user.id, 
       username: user.username, 
       is_admin: user.is_admin 
-    });
+    }, stayLoggedIn);
+
+    // Set persistent or session HTTP cookie for web and iOS webapp reliability
+    setTokenCookie(res, req, token, stayLoggedIn);
 
     res.json({
       message: 'Inloggen succesvol!',
       token,
+      stay_logged_in: stayLoggedIn,
       user: { 
         id: user.id, 
         username: user.username, 
@@ -114,6 +131,12 @@ router.post('/login', (req, res) => {
   }
 });
 
+// POST /api/auth/logout
+router.post('/logout', (req, res) => {
+  clearTokenCookie(res, req);
+  res.json({ message: 'Succesvol uitgelogd.' });
+});
+
 // GET /api/auth/me
 router.get('/me', requireAuth, (req, res) => {
   try {
@@ -122,7 +145,29 @@ router.get('/me', requireAuth, (req, res) => {
       return res.status(404).json({ error: 'Gebruiker niet gevonden.' });
     }
     if (!user.default_servings) user.default_servings = 4;
-    res.json({ user });
+
+    const stayLoggedIn = !!req.user.stay_logged_in;
+    let token = req.token;
+
+    // Sliding expiration: if stay_logged_in, renew token and cookie when remaining lifetime is < 20 days
+    if (stayLoggedIn) {
+      const now = Math.floor(Date.now() / 1000);
+      const remainingSeconds = (req.user.exp || 0) - now;
+      if (remainingSeconds < (20 * 24 * 60 * 60)) {
+        token = generateToken({
+          id: user.id,
+          username: user.username,
+          is_admin: user.is_admin
+        }, true);
+        setTokenCookie(res, req, token, true);
+      }
+    }
+
+    res.json({ 
+      user,
+      token,
+      stay_logged_in: stayLoggedIn
+    });
   } catch (err) {
     console.error('Error in /me:', err);
     res.status(500).json({ error: 'Er is een fout opgetreden bij het ophalen van de gegevens.' });

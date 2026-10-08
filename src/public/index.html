@@ -7,6 +7,11 @@
   <meta name="description" content="Bewaar je favoriete recepten en plan je weekmenu eenvoudig met deze gezellige kookplanner.">
   <meta name="theme-color" content="#ffffff">
 
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Receptenboekje">
+
   <!-- Favicons & Manifest -->
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -119,6 +124,12 @@
                 <i data-lucide="lock"></i>
                 <input type="password" id="loginPassword" name="password" required autocomplete="current-password" placeholder="••••••••">
               </div>
+            </div>
+            <div class="form-group auth-checkbox-group">
+              <label class="checkbox-label-container" for="loginStayLoggedIn">
+                <input type="checkbox" id="loginStayLoggedIn" name="stay_logged_in" checked>
+                <span class="custom-checkbox-text">Ingelogd blijven</span>
+              </label>
             </div>
             <button type="submit" class="btn btn-primary btn-block">Inloggen</button>
           </form>

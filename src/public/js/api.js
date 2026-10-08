@@ -15,6 +15,7 @@
     }
 
     const config = {
+      credentials: 'same-origin', // Ensure cookies are sent on all browsers and iOS WebApps
       ...options,
       headers: {
         ...headers,
@@ -43,7 +44,9 @@
 
       if (!response.ok) {
         if (response.status === 401) {
-          App.logout();
+          if (!options.silent && typeof App.logout === 'function') {
+            App.logout();
+          }
           throw new Error(data.error || 'Sessie verlopen. Log opnieuw in.');
         }
         throw new Error(data.error || 'Er is iets misgegaan.');
@@ -51,7 +54,9 @@
 
       return data;
     } catch (err) {
-      App.showToast(err.message, 'error');
+      if (!options.silent && typeof App.showToast === 'function') {
+        App.showToast(err.message, 'error');
+      }
       throw err;
     } finally {
       if (!options.silent) {

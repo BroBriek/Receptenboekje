@@ -3,7 +3,13 @@
 // ── APP NAMESPACE & STATE MANAGEMENT ─────────────────────────────────────────
 window.App = {
   state: {
-    token: localStorage.getItem('token') || null,
+    token: (() => {
+      try {
+        return localStorage.getItem('token') || sessionStorage.getItem('token') || null;
+      } catch {
+        return null;
+      }
+    })(),
     user: null,
     currentWeekMonday: null, // YYYY-MM-DD
     currentMealPlan: null,   // Holds the latest 7-day plan array

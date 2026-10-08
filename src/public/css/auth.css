@@ -40,3 +40,37 @@
 .auth-form {
   animation: fadeIn 0.3s ease;
 }
+
+.auth-checkbox-group {
+  margin-top: -0.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.checkbox-label-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-dark);
+  min-height: 44px; /* Ensure 44px minimum tap target for iOS touch accessibility */
+  padding: 0.25rem 0;
+}
+
+.checkbox-label-container input[type="checkbox"] {
+  appearance: auto;
+  -webkit-appearance: auto;
+  accent-color: var(--primary);
+  width: 1.2rem;
+  height: 1.2rem;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  margin: 0;
+}
+
+.custom-checkbox-text {
+  line-height: 1.25rem;
+}

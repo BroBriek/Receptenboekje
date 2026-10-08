@@ -118,6 +118,7 @@ async function apiFetch(endpoint, options = {}) {
   }
 
   const config = {
+    credentials: 'same-origin',
     ...options,
     headers: {
       ...headers,
@@ -133,7 +134,9 @@ async function apiFetch(endpoint, options = {}) {
 
     if (!response.ok) {
       if (response.status === 401) {
-        logout();
+        if (!options.silent) {
+          logout();
+        }
         throw new Error(data.error || 'Sessie verlopen. Log opnieuw in.');
       }
       throw new Error(data.error || 'Er is iets misgegaan.');
@@ -141,7 +144,9 @@ async function apiFetch(endpoint, options = {}) {
 
     return data;
   } catch (err) {
-    showToast(err.message, 'error');
+    if (!options.silent) {
+      showToast(err.message, 'error');
+    }
     throw err;
   } finally {
     toggleLoading(false);
@@ -149,32 +154,44 @@ async function apiFetch(endpoint, options = {}) {
 }
 
 async function checkAuth() {
-  if (!state.token) {
-    document.getElementById('appHeader')?.classList.add('hidden');
-    document.getElementById('appNav')?.classList.add('hidden');
-    showView('Auth');
-    return;
-  }
-  
+  state.token = localStorage.getItem('token') || sessionStorage.getItem('token') || null;
+
   try {
-    const data = await apiFetch('/api/auth/me');
+    const data = await apiFetch('/api/auth/me', { silent: true });
     state.user = data.user;
+    if (data.token) {
+      state.token = data.token;
+      if (data.stay_logged_in || localStorage.getItem('stay_logged_in') === 'true') {
+        localStorage.setItem('token', data.token);
+      }
+    }
     updateHeaderUserDisplay();
     document.getElementById('appHeader')?.classList.remove('hidden');
     document.getElementById('appNav')?.classList.remove('hidden');
 
-    state.currentWeekMonday = null; // resets to today's week
+    state.currentWeekMonday = null;
     showView('Planner');
   } catch (err) {
-    console.error('checkAuth error:', err);
-    logout();
+    localStorage.removeItem('token');
+    localStorage.removeItem('stay_logged_in');
+    sessionStorage.removeItem('token');
+    state.token = null;
+    state.user = null;
+    document.getElementById('appHeader')?.classList.add('hidden');
+    document.getElementById('appNav')?.classList.add('hidden');
+    showView('Auth');
   }
 }
 
-function logout() {
+async function logout() {
+  try {
+    await apiFetch('/api/auth/logout', { method: 'POST', silent: true });
+  } catch (e) {}
   state.token = null;
   state.user = null;
   localStorage.removeItem('token');
+  localStorage.removeItem('stay_logged_in');
+  sessionStorage.removeItem('token');
   document.getElementById('appHeader')?.classList.add('hidden');
   document.getElementById('appNav')?.classList.add('hidden');
   showView('Auth');
@@ -185,16 +202,25 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const username = e.target.username.value;
   const password = e.target.password.value;
+  const stayLoggedIn = e.target.stay_logged_in ? Boolean(e.target.stay_logged_in.checked) : true;
 
   try {
     const data = await apiFetch('/api/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify({ username, password, stay_logged_in: stayLoggedIn })
     });
     
     state.token = data.token;
     state.user = data.user;
-    localStorage.setItem('token', data.token);
+    if (stayLoggedIn) {
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('stay_logged_in', 'true');
+      sessionStorage.removeItem('token');
+    } else {
+      sessionStorage.setItem('token', data.token);
+      localStorage.removeItem('token');
+      localStorage.removeItem('stay_logged_in');
+    }
     showToast('Inloggen geslaagd!', 'success');
     e.target.reset();
     await checkAuth();
