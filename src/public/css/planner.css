@@ -1242,3 +1242,77 @@
   color: var(--text-muted);
   margin: 0;
 }
+
+/* ── VARIABLE SUB-ELEMENTS IN PLANNER & EDIT DAY MODAL ── */
+.planning-sub-elements {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+
+.sub-element-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.74rem;
+  background: var(--secondary-light);
+  color: var(--secondary-hover);
+  padding: 0.18rem 0.5rem;
+  border-radius: 6px;
+  font-weight: 500;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.sub-element-pill strong {
+  color: var(--text-dark);
+  font-weight: 600;
+}
+
+.edit-day-sub-elements-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.6rem;
+  gap: 0.5rem;
+}
+
+.edit-day-sub-elements-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.edit-day-sub-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  background: var(--bg-color);
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.edit-day-sub-group-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.edit-day-sub-select {
+  width: 100%;
+  font-size: 0.88rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background-color: var(--white);
+  color: var(--text-dark);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.edit-day-sub-select:focus {
+  border-color: var(--secondary);
+  box-shadow: 0 0 0 2px var(--secondary-light);
+}
+

@@ -1515,3 +1515,216 @@
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+
+/* ── VARIABLE SUB-ELEMENTS (INTERCHANGEABLE PARTS) ── */
+.form-card-header-with-action {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+#addSubElementGroupBtn,
+.add-sub-element-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.4rem;
+  min-height: 38px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+#addSubElementGroupBtn span,
+.add-sub-element-btn span {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+#addSubElementGroupBtn svg,
+#addSubElementGroupBtn i,
+.add-sub-element-btn svg,
+.add-sub-element-btn i {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.badge-optional {
+  display: inline-block;
+  font-size: 0.72rem;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-card-hover);
+  color: var(--text-muted);
+  font-weight: 600;
+  vertical-align: middle;
+  margin-left: 6px;
+}
+
+.sub-elements-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.sub-elements-empty-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: var(--bg-color);
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-top: 0.5rem;
+}
+
+.sub-element-card {
+  background: var(--bg-color);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sub-element-card:focus-within {
+  border-color: var(--secondary);
+  box-shadow: 0 0 0 2px var(--secondary-light);
+}
+
+.sub-element-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sub-element-name-input {
+  flex: 1;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.sub-element-options-box {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem;
+}
+
+.sub-element-add-row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.sub-element-add-input {
+  flex: 1;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.65rem;
+  height: 38px;
+}
+
+.sub-element-options-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  min-height: 28px;
+  align-items: center;
+}
+
+.sub-option-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--bg-card-hover);
+  color: var(--text-dark);
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.82rem;
+  font-weight: 500;
+  border: 1px solid var(--border);
+}
+
+.sub-option-chip-remove {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.sub-option-chip-remove:hover {
+  color: var(--primary);
+  background: rgba(0, 0, 0, 0.08);
+}
+
+/* Sub-elements in Recipe Detail Modal */
+.recipe-detail-sub-elements-section {
+  margin: 1.25rem 0;
+  padding: 1rem 1.25rem;
+  background: var(--bg-color);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
+.detail-sub-elements-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.detail-sub-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.detail-sub-card-title {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.detail-sub-card-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.detail-sub-card-chip {
+  background: var(--bg-color);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  font-size: 0.76rem;
+  padding: 0.15rem 0.5rem;
+  color: var(--text-dark);
+  font-weight: 500;
+}
+

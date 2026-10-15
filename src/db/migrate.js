@@ -312,6 +312,32 @@ const migrations = [
       }
     },
   },
+  {
+    name: '008_recipe_sub_elements',
+    up: () => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS recipe_sub_elements (
+          id          INTEGER PRIMARY KEY AUTOINCREMENT,
+          recipe_id   TEXT    NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+          name        TEXT    NOT NULL,
+          sort_order  INTEGER NOT NULL DEFAULT 0
+        );
+
+        CREATE TABLE IF NOT EXISTS recipe_sub_element_options (
+          id             INTEGER PRIMARY KEY AUTOINCREMENT,
+          sub_element_id INTEGER NOT NULL REFERENCES recipe_sub_elements(id) ON DELETE CASCADE,
+          name           TEXT    NOT NULL,
+          sort_order     INTEGER NOT NULL DEFAULT 0
+        );
+      `);
+
+      const mealPlanTableInfo = db.prepare("PRAGMA table_info('meal_plan_entries')").all();
+      const hasSelectedComponents = mealPlanTableInfo.some(col => col.name === 'selected_components');
+      if (!hasSelectedComponents) {
+        db.exec('ALTER TABLE meal_plan_entries ADD COLUMN selected_components TEXT DEFAULT NULL;');
+      }
+    },
+  },
 ];
 
 // Ensure the migrations table exists before querying it

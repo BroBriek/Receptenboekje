@@ -134,6 +134,22 @@ router.get('/', requireAuth, (req, res) => {
         WHERE ri.recipe_id = ?
         ORDER BY ri.sort_order ASC
       `).all(recipe.id);
+
+      recipe.sub_elements = db.prepare(`
+        SELECT id, name, sort_order
+        FROM recipe_sub_elements
+        WHERE recipe_id = ?
+        ORDER BY sort_order ASC, id ASC
+      `).all(recipe.id);
+
+      for (const sub of recipe.sub_elements) {
+        sub.options = db.prepare(`
+          SELECT id, name, sort_order
+          FROM recipe_sub_element_options
+          WHERE sub_element_id = ?
+          ORDER BY sort_order ASC, id ASC
+        `).all(sub.id);
+      }
     }
 
     res.json(recipes);
@@ -259,6 +275,23 @@ router.get('/:id', requireAuth, (req, res) => {
       ORDER BY step_number ASC
     `).all(recipeId);
 
+    // Get sub_elements
+    recipe.sub_elements = db.prepare(`
+      SELECT id, name, sort_order
+      FROM recipe_sub_elements
+      WHERE recipe_id = ?
+      ORDER BY sort_order ASC, id ASC
+    `).all(recipeId);
+
+    for (const sub of recipe.sub_elements) {
+      sub.options = db.prepare(`
+        SELECT id, name, sort_order
+        FROM recipe_sub_element_options
+        WHERE sub_element_id = ?
+        ORDER BY sort_order ASC, id ASC
+      `).all(sub.id);
+    }
+
     res.json(recipe);
   } catch (err) {
     console.error('Error fetching recipe details:', err);
@@ -284,6 +317,7 @@ router.post('/', requireAuth, upload.single('image'), (req, res) => {
   let tags = [];
   let ingredients = [];
   let steps = [];
+  let subElements = [];
 
   try {
     if (req.body.tags) {
@@ -295,10 +329,13 @@ router.post('/', requireAuth, upload.single('image'), (req, res) => {
     if (req.body.steps) {
       steps = typeof req.body.steps === 'string' ? JSON.parse(req.body.steps) : req.body.steps;
     }
+    if (req.body.sub_elements) {
+      subElements = typeof req.body.sub_elements === 'string' ? JSON.parse(req.body.sub_elements) : req.body.sub_elements;
+    }
   } catch (e) {
     console.error('Error parsing nested JSON data:', e);
     if (req.file) deleteImage(req.file.filename);
-    return res.status(400).json({ error: 'Ongeldig JSON-formaat voor tags, ingrediënten of stappen.' });
+    return res.status(400).json({ error: 'Ongeldig JSON-formaat voor tags, ingrediënten, stappen of onderdelen.' });
   }
 
   const imagePath = req.file ? req.file.filename : (req.body.stock_image || null);
@@ -408,6 +445,34 @@ router.post('/', requireAuth, upload.single('image'), (req, res) => {
         insertStep.run(recipeId, stepNumber++, step.instruction.trim(), timerSec);
       });
     }
+
+    // 5. Handle sub_elements
+    if (subElements && subElements.length > 0) {
+      const insertSub = db.prepare(`
+        INSERT INTO recipe_sub_elements (recipe_id, name, sort_order)
+        VALUES (?, ?, ?)
+      `);
+      const insertOption = db.prepare(`
+        INSERT INTO recipe_sub_element_options (sub_element_id, name, sort_order)
+        VALUES (?, ?, ?)
+      `);
+
+      let subOrder = 0;
+      subElements.forEach((sub) => {
+        if (!sub || !sub.name || !sub.name.trim()) return;
+        const subInfo = insertSub.run(recipeId, sub.name.trim(), subOrder++);
+        const subId = subInfo.lastInsertRowid;
+
+        if (sub.options && Array.isArray(sub.options)) {
+          let optOrder = 0;
+          sub.options.forEach((opt) => {
+            const optName = typeof opt === 'string' ? opt.trim() : (opt && opt.name ? opt.name.trim() : '');
+            if (!optName) return;
+            insertOption.run(subId, optName, optOrder++);
+          });
+        }
+      });
+    }
   });
 
   try {
@@ -443,6 +508,7 @@ router.put('/:id', requireAuth, upload.single('image'), (req, res) => {
   let tags = [];
   let ingredients = [];
   let steps = [];
+  let subElements = [];
 
   try {
     if (req.body.tags) {
@@ -454,10 +520,13 @@ router.put('/:id', requireAuth, upload.single('image'), (req, res) => {
     if (req.body.steps) {
       steps = typeof req.body.steps === 'string' ? JSON.parse(req.body.steps) : req.body.steps;
     }
+    if (req.body.sub_elements) {
+      subElements = typeof req.body.sub_elements === 'string' ? JSON.parse(req.body.sub_elements) : req.body.sub_elements;
+    }
   } catch (e) {
     console.error('Error parsing nested JSON data:', e);
     if (req.file) deleteImage(req.file.filename);
-    return res.status(400).json({ error: 'Ongeldig JSON-formaat voor tags, ingrediënten of stappen.' });
+    return res.status(400).json({ error: 'Ongeldig JSON-formaat voor tags, ingrediënten, stappen of onderdelen.' });
   }
 
   // Handle image path logic
@@ -499,6 +568,7 @@ router.put('/:id', requireAuth, upload.single('image'), (req, res) => {
     db.prepare('DELETE FROM recipe_tags WHERE recipe_id = ?').run(recipeId);
     db.prepare('DELETE FROM recipe_ingredients WHERE recipe_id = ?').run(recipeId);
     db.prepare('DELETE FROM recipe_steps WHERE recipe_id = ?').run(recipeId);
+    db.prepare('DELETE FROM recipe_sub_elements WHERE recipe_id = ?').run(recipeId);
 
     // 3. Re-insert tags (supports IDs, strings, objects with case-insensitive check)
     if (tags && tags.length > 0) {
@@ -586,6 +656,34 @@ router.put('/:id', requireAuth, upload.single('image'), (req, res) => {
           if (!isNaN(parsedMin) && parsedMin > 0) timerSec = Math.round(parsedMin * 60);
         }
         insertStep.run(recipeId, stepNumber++, step.instruction.trim(), timerSec);
+      });
+    }
+
+    // 6. Re-insert sub_elements
+    if (subElements && subElements.length > 0) {
+      const insertSub = db.prepare(`
+        INSERT INTO recipe_sub_elements (recipe_id, name, sort_order)
+        VALUES (?, ?, ?)
+      `);
+      const insertOption = db.prepare(`
+        INSERT INTO recipe_sub_element_options (sub_element_id, name, sort_order)
+        VALUES (?, ?, ?)
+      `);
+
+      let subOrder = 0;
+      subElements.forEach((sub) => {
+        if (!sub || !sub.name || !sub.name.trim()) return;
+        const subInfo = insertSub.run(recipeId, sub.name.trim(), subOrder++);
+        const subId = subInfo.lastInsertRowid;
+
+        if (sub.options && Array.isArray(sub.options)) {
+          let optOrder = 0;
+          sub.options.forEach((opt) => {
+            const optName = typeof opt === 'string' ? opt.trim() : (opt && opt.name ? opt.name.trim() : '');
+            if (!optName) return;
+            insertOption.run(subId, optName, optOrder++);
+          });
+        }
       });
     }
   });

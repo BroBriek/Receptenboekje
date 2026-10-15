@@ -421,6 +421,28 @@
                 </ul>
               </div>
 
+              <!-- Variable Sub-elements / Interchangeable Parts Builder -->
+              <div class="form-card" id="recipeSubElementsCard">
+                <div class="form-card-header-with-action">
+                  <div>
+                    <h3>Variabele Onderdelen <span class="badge-optional">Optioneel</span></h3>
+                    <p class="form-card-subtitle">Voor gerechten met verwisselbare delen (bijv. AVG: vlees, groente, aardappelen). De weekplanner kan hier willekeurig uit kiezen.</p>
+                  </div>
+                  <button type="button" id="addSubElementGroupBtn" class="btn btn-secondary btn-sm add-sub-element-btn" title="Nieuwe keuzegroep toevoegen">
+                    <i data-lucide="plus"></i><span>Onderdeel Toevoegen</span>
+                  </button>
+                </div>
+
+                <div id="recipeSubElementsContainer" class="sub-elements-container">
+                  <!-- Dynamic component groups -->
+                </div>
+
+                <div id="subElementsEmptyState" class="sub-elements-empty-hint">
+                  <i data-lucide="shuffle" style="width:20px;height:20px;color:var(--secondary);opacity:0.8;"></i>
+                  <span>Nog geen variabele onderdelen. Klik op <strong>Onderdeel Toevoegen</strong> om keuzegroepen aan te maken (zoals Vlees, Groenten, Aardappelen).</span>
+                </div>
+              </div>
+
               <!-- Recipe Steps Builder -->
               <div class="form-card">
                 <h3>Bereidingsstappen</h3>
@@ -1077,6 +1099,22 @@
           <p class="field-hint">De ingrediënten op de boodschappenlijst worden automatisch voor dit aantal personen geschaald.</p>
         </div>
 
+        <!-- Dynamic Sub-elements selection for this day -->
+        <div class="form-group hidden" id="editDaySubElementsGroup">
+          <div class="edit-day-sub-elements-header">
+            <div>
+              <label><i data-lucide="layers" style="width:14px;height:14px;vertical-align:-2px;"></i> Variabele Onderdelen voor deze dag</label>
+              <p class="field-hint" style="margin:0;">Kies de gewenste variatie voor dit gerecht of gooi de dobbelsteen.</p>
+            </div>
+            <button type="button" id="randomizeDayComponentsBtn" class="btn btn-outline btn-xs" title="Kies willekeurige onderdelen">
+              <i data-lucide="shuffle"></i> Willekeurig
+            </button>
+          </div>
+          <div id="editDaySubElementsContainer" class="edit-day-sub-elements-container">
+            <!-- Dynamic dropdowns or chip pickers per group -->
+          </div>
+        </div>
+
         <div class="form-group">
           <label for="editDayNotes">Notitie voor deze dag</label>
           <p class="field-hint">Als er geen maaltijd is gepland, is deze notitie duidelijk zichtbaar in het weekoverzicht (bijv. 'Uit eten bij opa & oma', 'Pizza bestellen', etc.).</p>
@@ -1227,6 +1265,17 @@
               </div>
             </div>
             <p id="recipeDetailDesc" class="recipe-detail-desc"></p>
+          </div>
+        </div>
+
+        <!-- Variable Sub-elements preview in Detail modal -->
+        <div id="recipeDetailSubElementsSection" class="recipe-detail-sub-elements-section hidden">
+          <div class="detail-section-header">
+            <h4><i data-lucide="layers" style="width:16px;height:16px;vertical-align:-2px;"></i> Variabele Onderdelen</h4>
+            <span class="field-hint" style="font-size:0.8rem; margin:0;">Verwisselbare componenten</span>
+          </div>
+          <div id="recipeDetailSubElementsList" class="detail-sub-elements-list">
+            <!-- Populated by JS -->
           </div>
         </div>
 

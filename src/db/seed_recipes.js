@@ -468,6 +468,37 @@ const recipes = [
       'Voeg knoflook, broccoli, oestersaus en sesamolie toe. Serveer met rijst.',
     ],
   },
+  {
+    title: 'Klassieke Hollandse AVG',
+    description: 'Het traditionele Hollandse aardappel-vlees-groente gerecht met verwisselbare onderdelen. Kies of laat de weekplanner kiezen uit verschillende vleessoorten, aardappelen en groenten.',
+    servings: 4, prep_time: 15, cook_time: 25,
+    tags: ['Hollands', 'Snel & Makkelijk'],
+    ingredients: [
+      { name: 'Roomboter', quantity: 25, unit: 'g', notes: 'om in te bakken' },
+      { name: 'Vleessaus of Jus', quantity: 1, unit: 'zakje', notes: 'of verse jus' },
+      { name: 'Zout en zwarte peper', quantity: null, unit: '', notes: 'naar smaak' },
+    ],
+    sub_elements: [
+      {
+        name: 'Vlees / Proteïne',
+        options: ['Gehaktbal', 'Speklap', 'Kipfilet', 'Slavink', 'Vegetarische burger']
+      },
+      {
+        name: 'Aardappelen',
+        options: ['Gekookte aardappelen', 'Aardappelpuree', 'Gebakken aardappels', 'Krieltjes']
+      },
+      {
+        name: 'Groenten',
+        options: ['Sperziebonen', 'Bloemkool', 'Gekookte worteltjes', 'Broccoli', 'Rode kool met appeltjes', 'Verse salade']
+      }
+    ],
+    steps: [
+      'Bereid de gekozen aardappelen (bijv. koken in 20 minuten met een snuf zout, of bakken in een koekenpan).',
+      'Kook of stoom de gekozen groente beetgaar in 8-12 minuten.',
+      'Bak het gekozen vlees of de vleesvervanger in een koekenpan met wat roomboter goudbruin en gaar.',
+      'Maak eventueel een lekkere jus van het braadvocht en serveer alles warm samen op het bord.'
+    ]
+  },
 ];
 
 function detectTimerInText(text) {
@@ -494,6 +525,8 @@ const insertRecipe = db.prepare(`INSERT INTO recipes (id, user_id, title, descri
 const insertRecipeTag = db.prepare(`INSERT OR IGNORE INTO recipe_tags (recipe_id, tag_id) VALUES (?, ?)`);
 const insertRecipeIngredient = db.prepare(`INSERT INTO recipe_ingredients (recipe_id, ingredient_id, quantity, unit, notes, sort_order) VALUES (?, ?, ?, ?, ?, ?)`);
 const insertStep = db.prepare(`INSERT INTO recipe_steps (recipe_id, step_number, instruction, timer_seconds) VALUES (?, ?, ?, ?)`);
+const insertSubElement = db.prepare(`INSERT INTO recipe_sub_elements (recipe_id, name, sort_order) VALUES (?, ?, ?)`);
+const insertSubOption = db.prepare(`INSERT INTO recipe_sub_element_options (sub_element_id, name, sort_order) VALUES (?, ?, ?)`);
 const recipeExists = db.prepare('SELECT id FROM recipes WHERE title = ?');
 
 const seedAll = db.transaction(() => {
@@ -509,6 +542,15 @@ const seedAll = db.transaction(() => {
     for (const tagName of recipe.tags) insertRecipeTag.run(recipeId, getOrCreateTag(tagName));
     recipe.ingredients.forEach((ing, idx) => insertRecipeIngredient.run(recipeId, getOrCreateIngredient(ing.name), ing.quantity ?? null, ing.unit ?? null, ing.notes ?? null, idx));
     recipe.steps.forEach((instruction, idx) => insertStep.run(recipeId, idx + 1, instruction, detectTimerInText(instruction)));
+    if (recipe.sub_elements) {
+      recipe.sub_elements.forEach((sub, sIdx) => {
+        const subInfo = insertSubElement.run(recipeId, sub.name, sIdx);
+        const subId = subInfo.lastInsertRowid;
+        (sub.options || []).forEach((opt, oIdx) => {
+          insertSubOption.run(subId, opt, oIdx);
+        });
+      });
+    }
     console.log(`  Added: ${recipe.title}`);
     added++;
   }

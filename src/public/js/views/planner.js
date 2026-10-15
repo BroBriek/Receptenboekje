@@ -147,6 +147,20 @@
       } else if (hasRecipe) {
         const dayServings = entry.servings || entry.recipe_servings || App.state.user?.default_servings || 4;
 
+        let subElementsHtml = '';
+        if (entry.selected_components && Array.isArray(entry.selected_components) && entry.selected_components.length > 0) {
+          const pills = entry.selected_components.map(comp => {
+            const opt = comp.selected_option || comp.option || '';
+            const grp = comp.group_name || comp.group || '';
+            if (!opt) return '';
+            return `<span class="sub-element-pill">${grp ? `<strong>${App.escapeHtml(grp)}:</strong> ` : ''}${App.escapeHtml(opt)}</span>`;
+          }).filter(Boolean).join('');
+
+          if (pills) {
+            subElementsHtml = `<div class="planning-sub-elements">${pills}</div>`;
+          }
+        }
+
         mealContentHtml = `
           <div class="planning-main">
             ${imageHtml}
@@ -154,6 +168,7 @@
               <div class="planning-meal-header-row">
                 <span class="planning-meal-title clickable" data-view-recipe="${entry.recipe_id}">${App.escapeHtml(entry.recipe_title)}</span>
               </div>
+              ${subElementsHtml}
               <div class="planning-meta-row">
                 <div class="planning-servings-badge" title="Aantal personen voor deze dag: klik op - of + om aan te passen" data-date="${date}">
                   <button type="button" class="planning-servings-step-btn" data-change-servings="${date}" data-delta="-1" title="Minder personen" aria-label="Minder personen">
@@ -702,7 +717,8 @@
       const isSkipped = entry ? (entry.skip_planning == 1 || entry.skip_planning === true) : false;
       const notes = entry && entry.notes ? entry.notes : '';
       const servings = entry ? (entry.servings || entry.recipe_servings || App.state.user?.default_servings || 4) : (App.state.user?.default_servings || 4);
-      App.openEditDayModal(date, recipeId, isSkipped, notes, servings);
+      const selectedComponents = entry ? entry.selected_components : null;
+      App.openEditDayModal(date, recipeId, isSkipped, notes, servings, selectedComponents);
       return;
     }
   });
@@ -718,8 +734,9 @@
     const isSkipped = entry ? (entry.skip_planning == 1 || entry.skip_planning === true) : false;
     const notes = entry ? entry.notes : '';
     const servings = entry ? (entry.servings || entry.recipe_servings || App.state.user?.default_servings || 4) : (App.state.user?.default_servings || 4);
+    const selectedComponents = entry ? entry.selected_components : null;
 
-    App.openEditDayModal(date, recipeId, isSkipped, notes, servings);
+    App.openEditDayModal(date, recipeId, isSkipped, notes, servings, selectedComponents);
   }
 
   // Helper: Select the week containing a specific date

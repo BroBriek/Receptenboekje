@@ -83,6 +83,14 @@
         `;
       }
 
+      if (recipe.sub_elements && recipe.sub_elements.length > 0) {
+        tagsHtml += `
+          <span class="recipe-card-tag" style="background-color: var(--secondary-light); color: var(--secondary-hover); border-color: var(--secondary-light);" title="${recipe.sub_elements.length} variabele onderdelen">
+            <i data-lucide="layers" style="width:10px;height:10px;display:inline-block;vertical-align:-1px;margin-right:3px;"></i>${recipe.sub_elements.length} onderdelen
+          </span>
+        `;
+      }
+
       const descHtml = recipe.description 
         ? `<p class="recipe-card-desc">${App.escapeHtml(recipe.description)}</p>` 
         : `<p class="recipe-card-desc" style="font-style:italic;">Geen omschrijving toegevoegd.</p>`;

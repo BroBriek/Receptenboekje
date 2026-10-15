@@ -3,7 +3,7 @@
 // ── MODAL: EDIT DAY (SEARCHABLE COMBOBOX & SUGGESTIONS) ────────────────────────
 (function(App) {
 
-  async function openEditDayModal(date, currentRecipeId, isSkipped, currentNotes, currentServings = null) {
+  async function openEditDayModal(date, currentRecipeId, isSkipped, currentNotes, currentServings = null, currentComponents = null) {
     const modal = document.getElementById('editDayModal');
     
     document.getElementById('editDayDate').value = date;
@@ -11,6 +11,7 @@
     document.getElementById('editDayNotes').value = currentNotes || '';
     
     App.state.currentEditDayRecipeId = currentRecipeId || null;
+    App.state.currentEditDayComponents = currentComponents || [];
     document.getElementById('editDayRecipeSelect').value = currentRecipeId || '';
 
     // Cache recipes
@@ -34,6 +35,7 @@
     searchInput.value = '';
 
     updateSelectedRecipeBanner();
+    renderDaySubElementsSelector();
     renderDishSuggestions('');
 
     const recipeGroup = document.getElementById('editDayRecipeGroup');
@@ -47,18 +49,77 @@
       if (servingsGroup) servingsGroup.classList.remove('hidden');
     }
 
-    // Toggle recipe and servings group visibility on skip checkbox
+    // Toggle recipe, servings, and sub-elements group visibility on skip checkbox
     document.getElementById('editDaySkipPlanning').onchange = (e) => {
-      if (e.target.checked) {
+      const isChecked = e.target.checked;
+      if (isChecked) {
         if (recipeGroup) recipeGroup.classList.add('hidden');
         if (servingsGroup) servingsGroup.classList.add('hidden');
+        document.getElementById('editDaySubElementsGroup')?.classList.add('hidden');
       } else {
         if (recipeGroup) recipeGroup.classList.remove('hidden');
         if (servingsGroup) servingsGroup.classList.remove('hidden');
+        renderDaySubElementsSelector();
       }
     };
 
     modal.showModal();
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function renderDaySubElementsSelector(forceRandom = false) {
+    const subGroup = document.getElementById('editDaySubElementsGroup');
+    const subContainer = document.getElementById('editDaySubElementsContainer');
+    if (!subGroup || !subContainer) return;
+
+    const isSkipped = document.getElementById('editDaySkipPlanning')?.checked;
+    if (isSkipped || !App.state.currentEditDayRecipeId) {
+      subGroup.classList.add('hidden');
+      subContainer.innerHTML = '';
+      return;
+    }
+
+    const recipe = (App.state.allRecipes || []).find(r => r.id === App.state.currentEditDayRecipeId);
+    if (!recipe || !recipe.sub_elements || recipe.sub_elements.length === 0) {
+      subGroup.classList.add('hidden');
+      subContainer.innerHTML = '';
+      return;
+    }
+
+    const currentComps = App.state.currentEditDayComponents || [];
+
+    subContainer.innerHTML = recipe.sub_elements.map(sub => {
+      const existingMatch = currentComps.find(c => (c.group_name || c.group) === sub.name);
+      const options = sub.options || [];
+
+      let selectedVal = '';
+      if (!forceRandom && existingMatch && (existingMatch.selected_option || existingMatch.option)) {
+        selectedVal = existingMatch.selected_option || existingMatch.option;
+      } else if (forceRandom && options.length > 0) {
+        const randOpt = options[Math.floor(Math.random() * options.length)];
+        selectedVal = typeof randOpt === 'string' ? randOpt : randOpt.name;
+      } else if (options.length > 0) {
+        const firstOpt = options[0];
+        selectedVal = typeof firstOpt === 'string' ? firstOpt : firstOpt.name;
+      }
+
+      const optionsHtml = options.map(opt => {
+        const optName = typeof opt === 'string' ? opt : opt.name;
+        const isSel = optName === selectedVal;
+        return `<option value="${App.escapeHtml(optName)}" ${isSel ? 'selected' : ''}>${App.escapeHtml(optName)}</option>`;
+      }).join('');
+
+      return `
+        <div class="edit-day-sub-group">
+          <label class="edit-day-sub-group-label">${App.escapeHtml(sub.name)}</label>
+          <select class="edit-day-sub-select" data-sub-group-select="${App.escapeHtml(sub.name)}">
+            ${optionsHtml}
+          </select>
+        </div>
+      `;
+    }).join('');
+
+    subGroup.classList.remove('hidden');
     if (window.lucide) lucide.createIcons();
   }
 
@@ -105,8 +166,24 @@
 
   document.getElementById('clearSelectedRecipeBtn')?.addEventListener('click', () => {
     App.state.currentEditDayRecipeId = null;
+    App.state.currentEditDayComponents = [];
     updateSelectedRecipeBanner();
+    renderDaySubElementsSelector();
     renderDishSuggestions(document.getElementById('editDayDishSearch').value);
+  });
+
+  // Randomize sub-elements button handler
+  document.getElementById('randomizeDayComponentsBtn')?.addEventListener('click', () => {
+    const selects = document.querySelectorAll('#editDaySubElementsContainer select[data-sub-group-select]');
+    if (selects.length === 0) return;
+
+    selects.forEach(sel => {
+      if (sel.options.length > 0) {
+        const randIdx = Math.floor(Math.random() * sel.options.length);
+        sel.selectedIndex = randIdx;
+      }
+    });
+    App.showToast('Willekeurige onderdelen gekozen!', 'info');
   });
 
   function renderDishSuggestions(query = '') {
@@ -175,7 +252,9 @@
     if (item) {
       const dishId = item.getAttribute('data-select-dish');
       App.state.currentEditDayRecipeId = dishId;
+      App.state.currentEditDayComponents = [];
       updateSelectedRecipeBanner();
+      renderDaySubElementsSelector(true);
       renderDishSuggestions(document.getElementById('editDayDishSearch').value);
 
       const selRecipe = App.state.allRecipes.find(r => r.id === dishId);
@@ -199,12 +278,28 @@
     const servingsInput = document.getElementById('editDayServings');
     const servingsVal = servingsInput ? parseInt(servingsInput.value, 10) : (App.state.user?.default_servings || 4);
 
+    const selected_components = [];
+    if (!skip && recipeId) {
+      const selects = document.querySelectorAll('#editDaySubElementsContainer select[data-sub-group-select]');
+      selects.forEach(sel => {
+        const grp = sel.getAttribute('data-sub-group-select');
+        const val = sel.value;
+        if (grp && val) {
+          selected_components.push({
+            group_name: grp,
+            selected_option: val
+          });
+        }
+      });
+    }
+
     const payload = {
       planned_on: date,
       recipe_id: skip ? null : (recipeId || null),
       servings: skip ? null : (servingsVal || 4),
       notes: notes,
-      skip_planning: skip ? 1 : 0
+      skip_planning: skip ? 1 : 0,
+      selected_components: selected_components.length > 0 ? selected_components : null
     };
 
     try {

@@ -74,6 +74,16 @@ router.get('/', requireAuth, (req, res) => {
         WHERE m.planned_on = ? AND m.meal_type = 'dinner'
       `).get(date);
 
+      if (entry && entry.selected_components) {
+        try {
+          entry.selected_components = typeof entry.selected_components === 'string'
+            ? JSON.parse(entry.selected_components)
+            : entry.selected_components;
+        } catch (e) {
+          entry.selected_components = null;
+        }
+      }
+
       return {
         date,
         dayName,
@@ -85,7 +95,8 @@ router.get('/', requireAuth, (req, res) => {
           recipe_servings: null,
           servings: null,
           notes: '',
-          skip_planning: 0
+          skip_planning: 0,
+          selected_components: null
         }
       };
     });
@@ -122,7 +133,7 @@ router.get('/shopping-list', requireAuth, (req, res) => {
 
     // Get all meal plan entries with recipes for this week
     const entries = db.prepare(`
-      SELECT m.planned_on, m.recipe_id, m.servings AS planned_servings, r.title AS recipe_title, r.servings AS recipe_servings
+      SELECT m.planned_on, m.recipe_id, m.servings AS planned_servings, m.selected_components, r.title AS recipe_title, r.servings AS recipe_servings
       FROM meal_plan_entries m
       JOIN recipes r ON m.recipe_id = r.id
       WHERE m.planned_on >= ? AND m.planned_on <= ? AND m.meal_type = 'dinner' AND m.skip_planning = 0
@@ -179,6 +190,32 @@ router.get('/shopping-list', requireAuth, (req, res) => {
           notes: ing.notes || ''
         };
       });
+
+      // Include selected sub-elements (components) if any
+      let entryComponents = [];
+      if (entry.selected_components) {
+        try {
+          entryComponents = typeof entry.selected_components === 'string'
+            ? JSON.parse(entry.selected_components)
+            : entry.selected_components;
+        } catch (e) {
+          entryComponents = [];
+        }
+      }
+
+      if (Array.isArray(entryComponents)) {
+        for (const comp of entryComponents) {
+          const optName = comp.selected_option || comp.option;
+          if (optName && optName.trim()) {
+            scaledIngredients.push({
+              name: optName.trim(),
+              quantity: null,
+              unit: '',
+              notes: comp.group_name ? `${comp.group_name} (${entry.recipe_title})` : `Onderdeel van ${entry.recipe_title}`
+            });
+          }
+        }
+      }
 
       byDay.push({
         date,
@@ -346,7 +383,7 @@ router.get('/month', requireAuth, (req, res) => {
 // POST /api/meal-plan/save - Save or update manual day in shared plan
 router.post('/save', requireAuth, (req, res) => {
   const userId = req.user.id;
-  const { planned_on, recipe_id, notes, skip_planning, servings } = req.body;
+  const { planned_on, recipe_id, notes, skip_planning, servings, selected_components } = req.body;
 
   if (!planned_on) {
     return res.status(400).json({ error: 'Datum (planned_on) is verplicht.' });
@@ -373,22 +410,53 @@ router.post('/save', requireAuth, (req, res) => {
       }
     }
 
+    let componentsJson = null;
+    if (!skip_planning && recipe_id) {
+      if (selected_components !== undefined && selected_components !== null) {
+        if (typeof selected_components === 'string') {
+          componentsJson = selected_components;
+        } else if (Array.isArray(selected_components)) {
+          componentsJson = selected_components.length > 0 ? JSON.stringify(selected_components) : null;
+        }
+      } else {
+        // Auto-randomize if recipe has sub-elements
+        const subs = db.prepare(`
+          SELECT id, name FROM recipe_sub_elements WHERE recipe_id = ? ORDER BY sort_order ASC, id ASC
+        `).all(recipe_id);
+        if (subs.length > 0) {
+          const picked = [];
+          for (const sub of subs) {
+            const opts = db.prepare(`
+              SELECT name FROM recipe_sub_element_options WHERE sub_element_id = ? ORDER BY sort_order ASC, id ASC
+            `).all(sub.id);
+            if (opts.length > 0) {
+              const randOpt = opts[Math.floor(Math.random() * opts.length)];
+              picked.push({ group_name: sub.name, selected_option: randOpt.name });
+            }
+          }
+          if (picked.length > 0) componentsJson = JSON.stringify(picked);
+        }
+      }
+    }
+
     db.prepare(`
-      INSERT INTO meal_plan_entries (user_id, planned_on, recipe_id, servings, notes, skip_planning, meal_type)
-      VALUES (?, ?, ?, ?, ?, ?, 'dinner')
+      INSERT INTO meal_plan_entries (user_id, planned_on, recipe_id, servings, notes, skip_planning, meal_type, selected_components)
+      VALUES (?, ?, ?, ?, ?, ?, 'dinner', ?)
       ON CONFLICT(planned_on, meal_type) DO UPDATE SET
         user_id = excluded.user_id,
         recipe_id = excluded.recipe_id,
         servings = excluded.servings,
         notes = excluded.notes,
-        skip_planning = excluded.skip_planning
+        skip_planning = excluded.skip_planning,
+        selected_components = excluded.selected_components
     `).run(
       userId,
       planned_on,
       recipe_id || null,
       parsedServings || null,
       notes !== undefined ? notes.trim() : '',
-      skip_planning ? 1 : 0
+      skip_planning ? 1 : 0,
+      componentsJson
     );
 
     res.json({ message: 'Planning succesvol opgeslagen!' });
@@ -463,13 +531,14 @@ router.post('/generate', requireAuth, (req, res) => {
         // If day is excluded (do not plan)
         if (excludedSet.has(date)) {
           db.prepare(`
-            INSERT INTO meal_plan_entries (user_id, planned_on, recipe_id, servings, notes, skip_planning, meal_type)
-            VALUES (?, ?, NULL, NULL, '', 1, 'dinner')
+            INSERT INTO meal_plan_entries (user_id, planned_on, recipe_id, servings, notes, skip_planning, meal_type, selected_components)
+            VALUES (?, ?, NULL, NULL, '', 1, 'dinner', NULL)
             ON CONFLICT(planned_on, meal_type) DO UPDATE SET
               user_id = excluded.user_id,
               recipe_id = NULL,
               servings = NULL,
-              skip_planning = 1
+              skip_planning = 1,
+              selected_components = NULL
           `).run(userId, date);
           continue;
         }
@@ -483,21 +552,45 @@ router.post('/generate', requireAuth, (req, res) => {
         }
 
         let selectedRecipeId = null;
+        let selectedComponentsJson = null;
+
         if (availableCandidates.length > 0) {
           const randomIndex = Math.floor(Math.random() * availableCandidates.length);
           selectedRecipeId = availableCandidates[randomIndex];
           usedRecipeIdsInWeek.add(selectedRecipeId);
+
+          // Randomize sub-element options if this dish has sub-elements
+          const subs = db.prepare(`
+            SELECT id, name FROM recipe_sub_elements WHERE recipe_id = ? ORDER BY sort_order ASC, id ASC
+          `).all(selectedRecipeId);
+
+          if (subs.length > 0) {
+            const picked = [];
+            for (const sub of subs) {
+              const opts = db.prepare(`
+                SELECT name FROM recipe_sub_element_options WHERE sub_element_id = ? ORDER BY sort_order ASC, id ASC
+              `).all(sub.id);
+              if (opts.length > 0) {
+                const randOpt = opts[Math.floor(Math.random() * opts.length)];
+                picked.push({ group_name: sub.name, selected_option: randOpt.name });
+              }
+            }
+            if (picked.length > 0) {
+              selectedComponentsJson = JSON.stringify(picked);
+            }
+          }
         }
 
         db.prepare(`
-          INSERT INTO meal_plan_entries (user_id, planned_on, recipe_id, servings, notes, skip_planning, meal_type)
-          VALUES (?, ?, ?, ?, '', 0, 'dinner')
+          INSERT INTO meal_plan_entries (user_id, planned_on, recipe_id, servings, notes, skip_planning, meal_type, selected_components)
+          VALUES (?, ?, ?, ?, '', 0, 'dinner', ?)
           ON CONFLICT(planned_on, meal_type) DO UPDATE SET
             user_id = excluded.user_id,
             recipe_id = excluded.recipe_id,
             servings = excluded.servings,
-            skip_planning = 0
-        `).run(userId, date, selectedRecipeId, selectedRecipeId ? defaultServings : null);
+            skip_planning = 0,
+            selected_components = excluded.selected_components
+        `).run(userId, date, selectedRecipeId, selectedRecipeId ? defaultServings : null, selectedComponentsJson);
       }
     });
 

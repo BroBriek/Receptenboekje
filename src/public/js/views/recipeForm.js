@@ -10,6 +10,7 @@
     App.state.recipeFormIngredients = [];
     App.state.recipeFormSteps = [];
     App.state.recipeFormSelectedTagIds = new Set();
+    App.state.recipeFormSubElements = [];
     editingStepIndex = null;
     
     document.getElementById('recipeFormTitle').textContent = 'Nieuw Recept Toevoegen';
@@ -42,6 +43,7 @@
     await App.fetchTags();
     renderRecipeFormIngredients();
     renderRecipeFormSteps();
+    renderRecipeFormSubElements();
     renderDynamicRecipeTags();
     
     App.showView('RecipeForm');
@@ -62,6 +64,10 @@
       timer_seconds: (s.timer_seconds && s.timer_seconds > 0) ? s.timer_seconds : App.detectTimerInText(s.instruction)
     }));
     App.state.recipeFormSelectedTagIds = new Set((recipe.tags || []).map(t => t.id));
+    App.state.recipeFormSubElements = (recipe.sub_elements || []).map(sub => ({
+      name: sub.name,
+      options: (sub.options || []).map(o => (typeof o === 'string' ? o : o.name))
+    }));
 
     const timerInput = document.getElementById('stepTimerMinutes');
     if (timerInput) timerInput.value = '';
@@ -123,6 +129,7 @@
     renderDynamicRecipeTags();
     renderRecipeFormIngredients();
     renderRecipeFormSteps();
+    renderRecipeFormSubElements();
 
     App.showView('RecipeForm');
   }
@@ -409,6 +416,140 @@
       if (!isNaN(index)) removeFormIngredient(index);
     }
   });
+
+  // ── Variable Sub-Elements Builder ──
+  function renderRecipeFormSubElements() {
+    const container = document.getElementById('recipeSubElementsContainer');
+    const emptyHint = document.getElementById('subElementsEmptyState');
+    if (!container) return;
+
+    if (!App.state.recipeFormSubElements || App.state.recipeFormSubElements.length === 0) {
+      container.innerHTML = '';
+      if (emptyHint) emptyHint.classList.remove('hidden');
+      return;
+    }
+
+    if (emptyHint) emptyHint.classList.add('hidden');
+
+    container.innerHTML = App.state.recipeFormSubElements.map((sub, groupIndex) => {
+      const optionsHtml = (sub.options || []).map((opt, optIndex) => `
+        <span class="sub-option-chip">
+          <span>${App.escapeHtml(opt)}</span>
+          <button type="button" class="sub-option-chip-remove" data-remove-sub-opt="${groupIndex}:${optIndex}" title="Verwijder optie ${App.escapeHtml(opt)}" aria-label="Verwijder optie">
+            <i data-lucide="x" style="width:12px;height:12px;"></i>
+          </button>
+        </span>
+      `).join('');
+
+      return `
+        <div class="sub-element-card" data-sub-group-index="${groupIndex}">
+          <div class="sub-element-header">
+            <input type="text" class="sub-element-name-input" data-sub-name-index="${groupIndex}" value="${App.escapeHtml(sub.name || '')}" placeholder="Naam onderdeel (bijv. Vlees, Groente, Aardappelen)...">
+            <button type="button" class="btn-icon btn-sm btn-outline-danger sub-element-remove-btn" data-remove-sub-group="${groupIndex}" title="Verwijder dit onderdeel" aria-label="Verwijder dit onderdeel">
+              <i data-lucide="trash-2" style="width:15px;height:15px;"></i>
+            </button>
+          </div>
+          <div class="sub-element-options-box">
+            <div class="sub-element-add-row">
+              <input type="text" class="sub-element-add-input" data-sub-opt-input="${groupIndex}" placeholder="Voeg optie toe (bijv. Gehaktbal, Sperziebonen)...">
+              <button type="button" class="btn btn-secondary btn-sm" data-add-sub-opt="${groupIndex}" title="Optie toevoegen">
+                <i data-lucide="plus" style="width:14px;height:14px;"></i><span>Toevoegen</span>
+              </button>
+            </div>
+            <div class="sub-element-options-chips">
+              ${optionsHtml || '<span style="font-size:0.8rem; color:var(--text-muted); font-style:italic;">Nog geen opties toegevoegd. Typ hierboven om een optie toe te voegen.</span>'}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    if (window.lucide) lucide.createIcons();
+  }
+
+  // Add new sub-element group
+  document.getElementById('addSubElementGroupBtn')?.addEventListener('click', () => {
+    if (!App.state.recipeFormSubElements) App.state.recipeFormSubElements = [];
+    App.state.recipeFormSubElements.push({ name: '', options: [] });
+    renderRecipeFormSubElements();
+
+    const inputs = document.querySelectorAll('.sub-element-name-input');
+    if (inputs.length > 0) {
+      inputs[inputs.length - 1].focus();
+    }
+  });
+
+  // Delegate input & clicks on sub-elements container
+  const subContainer = document.getElementById('recipeSubElementsContainer');
+  if (subContainer) {
+    subContainer.addEventListener('input', (e) => {
+      const nameInput = e.target.closest('[data-sub-name-index]');
+      if (nameInput) {
+        const index = parseInt(nameInput.getAttribute('data-sub-name-index'), 10);
+        if (!isNaN(index) && App.state.recipeFormSubElements[index]) {
+          App.state.recipeFormSubElements[index].name = nameInput.value;
+        }
+      }
+    });
+
+    subContainer.addEventListener('keydown', (e) => {
+      const optInput = e.target.closest('[data-sub-opt-input]');
+      if (optInput && e.key === 'Enter') {
+        e.preventDefault();
+        const groupIndex = parseInt(optInput.getAttribute('data-sub-opt-input'), 10);
+        const optVal = optInput.value.trim();
+        if (optVal && !isNaN(groupIndex) && App.state.recipeFormSubElements[groupIndex]) {
+          if (!App.state.recipeFormSubElements[groupIndex].options) {
+            App.state.recipeFormSubElements[groupIndex].options = [];
+          }
+          App.state.recipeFormSubElements[groupIndex].options.push(optVal);
+          renderRecipeFormSubElements();
+          const nextInput = document.querySelector(`[data-sub-opt-input="${groupIndex}"]`);
+          if (nextInput) nextInput.focus();
+        }
+      }
+    });
+
+    subContainer.addEventListener('click', (e) => {
+      const addOptBtn = e.target.closest('[data-add-sub-opt]');
+      if (addOptBtn) {
+        const groupIndex = parseInt(addOptBtn.getAttribute('data-add-sub-opt'), 10);
+        const card = addOptBtn.closest('.sub-element-card');
+        const optInput = card?.querySelector(`[data-sub-opt-input="${groupIndex}"]`);
+        const optVal = optInput ? optInput.value.trim() : '';
+        if (optVal && !isNaN(groupIndex) && App.state.recipeFormSubElements[groupIndex]) {
+          if (!App.state.recipeFormSubElements[groupIndex].options) {
+            App.state.recipeFormSubElements[groupIndex].options = [];
+          }
+          App.state.recipeFormSubElements[groupIndex].options.push(optVal);
+          renderRecipeFormSubElements();
+          const nextInput = document.querySelector(`[data-sub-opt-input="${groupIndex}"]`);
+          if (nextInput) nextInput.focus();
+        }
+        return;
+      }
+
+      const removeOptBtn = e.target.closest('[data-remove-sub-opt]');
+      if (removeOptBtn) {
+        const [gIdx, oIdx] = removeOptBtn.getAttribute('data-remove-sub-opt').split(':').map(Number);
+        if (!isNaN(gIdx) && !isNaN(oIdx) && App.state.recipeFormSubElements[gIdx]) {
+          App.state.recipeFormSubElements[gIdx].options.splice(oIdx, 1);
+          renderRecipeFormSubElements();
+        }
+        return;
+      }
+
+      const removeGroupBtn = e.target.closest('[data-remove-sub-group]');
+      if (removeGroupBtn) {
+        const groupIndex = parseInt(removeGroupBtn.getAttribute('data-remove-sub-group'), 10);
+        if (!isNaN(groupIndex) && App.state.recipeFormSubElements[groupIndex] !== undefined) {
+          App.state.recipeFormSubElements.splice(groupIndex, 1);
+          renderRecipeFormSubElements();
+        }
+        return;
+      }
+    });
+  }
 
   // Recipe Steps Builder UI handlers & auto-detection
   const stepTextEl = document.getElementById('stepText');
@@ -883,6 +1024,7 @@
     formData.append('tags', JSON.stringify(selectedTagIds));
     formData.append('ingredients', JSON.stringify(App.state.recipeFormIngredients));
     formData.append('steps', JSON.stringify(App.state.recipeFormSteps));
+    formData.append('sub_elements', JSON.stringify(App.state.recipeFormSubElements || []));
 
     if (App.state.currentEditingRecipeId) {
       formData.append('remove_image', flagRemoveImage ? 'true' : 'false');

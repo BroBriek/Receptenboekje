@@ -140,6 +140,36 @@
       // Render dynamically scaled ingredients list
       renderDetailIngredients();
 
+      // Render variable sub-elements if any
+      const subSection = document.getElementById('recipeDetailSubElementsSection');
+      const subList = document.getElementById('recipeDetailSubElementsList');
+      if (subSection && subList) {
+        if (recipe.sub_elements && recipe.sub_elements.length > 0) {
+          subList.innerHTML = recipe.sub_elements.map(sub => {
+            const chips = (sub.options || []).map(opt => {
+              const optName = typeof opt === 'string' ? opt : opt.name;
+              return `<span class="detail-sub-card-chip">${App.escapeHtml(optName)}</span>`;
+            }).join('');
+
+            return `
+              <div class="detail-sub-card">
+                <div class="detail-sub-card-title">
+                  <i data-lucide="layers" style="width:14px;height:14px;"></i>
+                  <span>${App.escapeHtml(sub.name)}</span>
+                </div>
+                <div class="detail-sub-card-chips">
+                  ${chips || '<span style="font-size:0.75rem; color:var(--text-muted); font-style:italic;">Geen opties</span>'}
+                </div>
+              </div>
+            `;
+          }).join('');
+          subSection.classList.remove('hidden');
+        } else {
+          subSection.classList.add('hidden');
+          subList.innerHTML = '';
+        }
+      }
+
       // Steps list with timer badges & click-to-cook
       const stepsList = document.getElementById('recipeDetailStepsList');
       if (recipe.steps && recipe.steps.length > 0) {
