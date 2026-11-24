@@ -84,6 +84,10 @@ router.get('/', requireAuth, (req, res) => {
         }
       }
 
+      if (entry) {
+        entry.is_locked = (entry.is_locked === 1 && entry.recipe_id && entry.skip_planning !== 1) ? 1 : 0;
+      }
+
       return {
         date,
         dayName,
@@ -96,6 +100,7 @@ router.get('/', requireAuth, (req, res) => {
           servings: null,
           notes: '',
           skip_planning: 0,
+          is_locked: 0,
           selected_components: null
         }
       };
@@ -354,6 +359,7 @@ router.get('/month', requireAuth, (req, res) => {
         m.recipe_id,
         m.notes,
         m.skip_planning,
+        m.is_locked,
         r.title AS recipe_title,
         r.image_path AS recipe_image
       FROM meal_plan_entries m
@@ -383,7 +389,7 @@ router.get('/month', requireAuth, (req, res) => {
 // POST /api/meal-plan/save - Save or update manual day in shared plan
 router.post('/save', requireAuth, (req, res) => {
   const userId = req.user.id;
-  const { planned_on, recipe_id, notes, skip_planning, servings, selected_components } = req.body;
+  const { planned_on, recipe_id, notes, skip_planning, servings, selected_components, is_locked } = req.body;
 
   if (!planned_on) {
     return res.status(400).json({ error: 'Datum (planned_on) is verplicht.' });
@@ -439,15 +445,29 @@ router.post('/save', requireAuth, (req, res) => {
       }
     }
 
+    const hasValidMeal = !skip_planning && Boolean(recipe_id);
+    let nextIsLocked = 0;
+    if (!hasValidMeal) {
+      nextIsLocked = 0;
+    } else if (is_locked !== undefined) {
+      nextIsLocked = is_locked ? 1 : 0;
+    } else {
+      const existingEntry = db.prepare(`
+        SELECT is_locked FROM meal_plan_entries WHERE planned_on = ? AND meal_type = 'dinner'
+      `).get(planned_on);
+      nextIsLocked = existingEntry && existingEntry.is_locked ? 1 : 0;
+    }
+
     db.prepare(`
-      INSERT INTO meal_plan_entries (user_id, planned_on, recipe_id, servings, notes, skip_planning, meal_type, selected_components)
-      VALUES (?, ?, ?, ?, ?, ?, 'dinner', ?)
+      INSERT INTO meal_plan_entries (user_id, planned_on, recipe_id, servings, notes, skip_planning, is_locked, meal_type, selected_components)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'dinner', ?)
       ON CONFLICT(planned_on, meal_type) DO UPDATE SET
         user_id = excluded.user_id,
         recipe_id = excluded.recipe_id,
         servings = excluded.servings,
         notes = excluded.notes,
         skip_planning = excluded.skip_planning,
+        is_locked = excluded.is_locked,
         selected_components = excluded.selected_components
     `).run(
       userId,
@@ -456,6 +476,7 @@ router.post('/save', requireAuth, (req, res) => {
       parsedServings || null,
       notes !== undefined ? notes.trim() : '',
       skip_planning ? 1 : 0,
+      nextIsLocked,
       componentsJson
     );
 
@@ -466,10 +487,61 @@ router.post('/save', requireAuth, (req, res) => {
   }
 });
 
+// POST /api/meal-plan/lock - Lock or unlock a planned meal across all users and devices
+router.post('/lock', requireAuth, (req, res) => {
+  const { planned_on, is_locked } = req.body;
+
+  if (!planned_on || typeof planned_on !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(planned_on)) {
+    return res.status(400).json({ error: 'Geldige datum (planned_on) is verplicht.' });
+  }
+
+  try {
+    const existing = db.prepare(`
+      SELECT id, recipe_id, skip_planning, is_locked
+      FROM meal_plan_entries
+      WHERE planned_on = ? AND meal_type = 'dinner'
+    `).get(planned_on);
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Geen geplande maaltijd gevonden voor deze dag.' });
+    }
+
+    let nextLocked;
+    if (typeof is_locked === 'boolean') {
+      nextLocked = is_locked ? 1 : 0;
+    } else if (is_locked === 1 || is_locked === '1' || is_locked === 'true') {
+      nextLocked = 1;
+    } else if (is_locked === 0 || is_locked === '0' || is_locked === 'false') {
+      nextLocked = 0;
+    } else {
+      nextLocked = existing.is_locked ? 0 : 1;
+    }
+
+    if (nextLocked === 1 && (!existing.recipe_id || existing.skip_planning === 1)) {
+      return res.status(400).json({ error: 'Alleen een gepland gerecht kan worden vergrendeld.' });
+    }
+
+    db.prepare(`
+      UPDATE meal_plan_entries
+      SET is_locked = ?
+      WHERE id = ?
+    `).run(nextLocked, existing.id);
+
+    res.json({
+      planned_on,
+      is_locked: nextLocked,
+      message: nextLocked ? 'Maaltijd vergrendeld!' : 'Maaltijd ontgrendeld!'
+    });
+  } catch (err) {
+    console.error('Error updating meal lock:', err);
+    res.status(500).json({ error: 'Er is een fout opgetreden bij het bijwerken van de vergrendeling.' });
+  }
+});
+
 // POST /api/meal-plan/generate - Generate shared week plan with settings without duplicates
 router.post('/generate', requireAuth, (req, res) => {
   const userId = req.user.id;
-  const { start_date, excluded_days, tag_ids, locked_dates } = req.body;
+  const { start_date, excluded_days, tag_ids } = req.body;
 
   if (!start_date) {
     return res.status(400).json({ error: 'Startdatum (start_date) is verplicht.' });
@@ -478,8 +550,8 @@ router.post('/generate', requireAuth, (req, res) => {
   try {
     const monday = getMonday(start_date);
     const weekDates = getWeekDates(monday);
+    const sunday = weekDates[6].date;
 
-    const lockedSet = new Set(locked_dates || []);
     const excludedSet = new Set(excluded_days || []);
 
     const currentUser = db.prepare('SELECT default_servings FROM users WHERE id = ?').get(userId);
@@ -506,22 +578,28 @@ router.post('/generate', requireAuth, (req, res) => {
       fallbackUsed = true;
     }
 
-    // 2. Track recipes already locked for this week so we don't pick duplicate recipes
-    const usedRecipeIdsInWeek = new Set();
+    const generateTransaction = db.transaction(() => {
+      // 2. Read authoritative locked meals for this week directly from the database
+      const dbLockedRows = db.prepare(`
+        SELECT planned_on, recipe_id
+        FROM meal_plan_entries
+        WHERE planned_on >= ? AND planned_on <= ?
+          AND meal_type = 'dinner'
+          AND is_locked = 1
+          AND skip_planning = 0
+          AND recipe_id IS NOT NULL
+      `).all(monday, sunday);
 
-    for (const { date } of weekDates) {
-      if (lockedSet.has(date)) {
-        const existingLocked = db.prepare(`
-          SELECT recipe_id FROM meal_plan_entries 
-          WHERE planned_on = ? AND meal_type = 'dinner'
-        `).get(date);
-        if (existingLocked && existingLocked.recipe_id) {
-          usedRecipeIdsInWeek.add(existingLocked.recipe_id);
+      const lockedSet = new Set();
+      const usedRecipeIdsInWeek = new Set();
+
+      for (const row of dbLockedRows) {
+        lockedSet.add(row.planned_on);
+        if (row.recipe_id) {
+          usedRecipeIdsInWeek.add(row.recipe_id);
         }
       }
-    }
 
-    const generateTransaction = db.transaction(() => {
       for (const { date } of weekDates) {
         // Skip locked days - leave untouched
         if (lockedSet.has(date)) {
@@ -531,13 +609,14 @@ router.post('/generate', requireAuth, (req, res) => {
         // If day is excluded (do not plan)
         if (excludedSet.has(date)) {
           db.prepare(`
-            INSERT INTO meal_plan_entries (user_id, planned_on, recipe_id, servings, notes, skip_planning, meal_type, selected_components)
-            VALUES (?, ?, NULL, NULL, '', 1, 'dinner', NULL)
+            INSERT INTO meal_plan_entries (user_id, planned_on, recipe_id, servings, notes, skip_planning, is_locked, meal_type, selected_components)
+            VALUES (?, ?, NULL, NULL, '', 1, 0, 'dinner', NULL)
             ON CONFLICT(planned_on, meal_type) DO UPDATE SET
               user_id = excluded.user_id,
               recipe_id = NULL,
               servings = NULL,
               skip_planning = 1,
+              is_locked = 0,
               selected_components = NULL
           `).run(userId, date);
           continue;
@@ -582,13 +661,14 @@ router.post('/generate', requireAuth, (req, res) => {
         }
 
         db.prepare(`
-          INSERT INTO meal_plan_entries (user_id, planned_on, recipe_id, servings, notes, skip_planning, meal_type, selected_components)
-          VALUES (?, ?, ?, ?, '', 0, 'dinner', ?)
+          INSERT INTO meal_plan_entries (user_id, planned_on, recipe_id, servings, notes, skip_planning, is_locked, meal_type, selected_components)
+          VALUES (?, ?, ?, ?, '', 0, 0, 'dinner', ?)
           ON CONFLICT(planned_on, meal_type) DO UPDATE SET
             user_id = excluded.user_id,
             recipe_id = excluded.recipe_id,
             servings = excluded.servings,
             skip_planning = 0,
+            is_locked = 0,
             selected_components = excluded.selected_components
         `).run(userId, date, selectedRecipeId, selectedRecipeId ? defaultServings : null, selectedComponentsJson);
       }

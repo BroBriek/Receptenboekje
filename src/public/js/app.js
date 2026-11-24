@@ -27,6 +27,6 @@ window.App = {
     
     // UI states
     currentView: 'Planner',
-    lockedDates: new Set() // dates (YYYY-MM-DD) locked in the current planner
+    lockedDates: new Set() // dates (YYYY-MM-DD) locked in the currently loaded week (synced from server)
   }
 };

@@ -338,6 +338,16 @@ const migrations = [
       }
     },
   },
+  {
+    name: '009_meal_plan_locked',
+    up: () => {
+      const mealPlanTableInfo = db.prepare("PRAGMA table_info('meal_plan_entries')").all();
+      const hasIsLocked = mealPlanTableInfo.some(col => col.name === 'is_locked');
+      if (!hasIsLocked) {
+        db.exec('ALTER TABLE meal_plan_entries ADD COLUMN is_locked INTEGER NOT NULL DEFAULT 0;');
+      }
+    },
+  },
 ];
 
 // Ensure the migrations table exists before querying it

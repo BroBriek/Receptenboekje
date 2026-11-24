@@ -315,6 +315,11 @@
   align-self: flex-end;
 }
 
+.lock-btn.is-locked {
+  background-color: var(--primary-light);
+  color: var(--primary);
+}
+
 /* ── GENERATE WEEK MENU MODAL UI ────────────────────────────────────────── */
 .generate-menu-modal {
   max-width: 620px;

@@ -8,6 +8,22 @@
     'Juli', 'Augustus', 'September', 'Oktober', 'November', 'December'
   ];
 
+  const pendingLockPromises = new Map();
+  let lastSilentRefreshAt = 0;
+
+  function syncLockedDatesFromPlan(plan) {
+    App.state.lockedDates = new Set(
+      (plan || [])
+        .filter(item => item.entry && (item.entry.is_locked === 1 || item.entry.is_locked === true) && item.entry.recipe_id && item.entry.skip_planning !== 1)
+        .map(item => item.date)
+    );
+  }
+
+  function waitForPendingLocks() {
+    if (pendingLockPromises.size === 0) return Promise.resolve();
+    return Promise.allSettled(Array.from(pendingLockPromises.values()));
+  }
+
   // Helper to format relative time in Dutch
   function formatLastPlannedRelative(lastPlannedDateStr) {
     if (!lastPlannedDateStr) {
@@ -46,6 +62,7 @@
       const data = await App.apiFetch(url);
       App.state.currentWeekMonday = data.monday;
       App.state.currentMealPlan = data.plan;
+      syncLockedDatesFromPlan(data.plan);
       
       // Update week title
       const [y, m, d] = App.state.currentWeekMonday.split('-').map(Number);
@@ -68,6 +85,34 @@
     }
   }
 
+  async function refreshWeekPlanningSilent(force = false) {
+    if (!App.state.token) return;
+    await waitForPendingLocks();
+
+    const now = Date.now();
+    if (!force && now - lastSilentRefreshAt < 2000) return;
+    lastSilentRefreshAt = now;
+
+    const requestedMonday = App.state.currentWeekMonday;
+    let url = '/api/meal-plan';
+    if (requestedMonday) {
+      url += `?start_date=${requestedMonday}`;
+    }
+
+    try {
+      const data = await App.apiFetch(url, { silent: true });
+      if (App.state.currentWeekMonday && data.monday !== App.state.currentWeekMonday) {
+        return;
+      }
+      App.state.currentWeekMonday = data.monday;
+      App.state.currentMealPlan = data.plan;
+      syncLockedDatesFromPlan(data.plan);
+      renderPlanner(data.plan);
+    } catch (err) {
+      console.error('Silent planner refresh error:', err);
+    }
+  }
+
   // Render the 7 planning days
   function renderPlanner(plan) {
     const container = document.getElementById('weekPlanningGrid');
@@ -79,12 +124,12 @@
     plan.forEach(({ date, dayName, entry }) => {
       const isToday = date === todayStr;
       const isSkipped = entry.skip_planning === 1;
-      const isLocked = App.state.lockedDates.has(date);
       const hasRecipe = Boolean(entry.recipe_id);
+      const isLocked = hasRecipe && !isSkipped && (entry.is_locked === 1 || entry.is_locked === true);
       const hasNotes = Boolean(entry.notes && entry.notes.trim());
 
       const card = document.createElement('div');
-      card.className = `planning-card ${isToday ? 'today' : ''} ${isSkipped ? 'skipped' : ''}`;
+      card.className = `planning-card ${isToday ? 'today' : ''} ${isSkipped ? 'skipped' : ''} ${isLocked ? 'locked' : ''}`;
       card.setAttribute('data-date', date);
 
       // Day Header badge
@@ -219,7 +264,7 @@
       const actionsHtml = `
         <div class="planning-actions">
           ${hasRecipe && !isSkipped ? `
-            <button class="btn-icon lock-btn" title="${lockTitle}" data-lock-date="${date}">
+            <button class="btn-icon lock-btn ${isLocked ? 'is-locked' : ''}" title="${lockTitle}" aria-label="${lockTitle}" aria-pressed="${isLocked ? 'true' : 'false'}" data-lock-date="${date}">
               <i data-lucide="${lockIcon}" style="color:${lockColor};"></i>
             </button>
           ` : ''}
@@ -243,13 +288,53 @@
     if (window.lucide) lucide.createIcons();
   }
 
-  function toggleLockDate(date) {
-    if (App.state.lockedDates.has(date)) {
-      App.state.lockedDates.delete(date);
-    } else {
-      App.state.lockedDates.add(date);
-    }
-    loadWeekPlanning(App.state.currentWeekMonday);
+  async function toggleLockDate(date) {
+    if (!date || pendingLockPromises.has(date)) return;
+
+    const planItem = App.state.currentMealPlan
+      ? App.state.currentMealPlan.find(item => item.date === date)
+      : null;
+    const entry = planItem ? planItem.entry : null;
+    if (!entry || !entry.recipe_id || entry.skip_planning === 1) return;
+
+    const previousLocked = entry.is_locked === 1 || entry.is_locked === true;
+    const nextLocked = !previousLocked;
+
+    // Optimistic UI update
+    entry.is_locked = nextLocked ? 1 : 0;
+    syncLockedDatesFromPlan(App.state.currentMealPlan);
+    renderPlanner(App.state.currentMealPlan);
+
+    const requestPromise = (async () => {
+      try {
+        const res = await App.apiFetch('/api/meal-plan/lock', {
+          method: 'POST',
+          silent: true,
+          body: JSON.stringify({
+            planned_on: date,
+            is_locked: nextLocked
+          })
+        });
+
+        const confirmedLocked = Boolean(res.is_locked);
+        entry.is_locked = confirmedLocked ? 1 : 0;
+        syncLockedDatesFromPlan(App.state.currentMealPlan);
+        renderPlanner(App.state.currentMealPlan);
+      } catch (err) {
+        entry.is_locked = previousLocked ? 1 : 0;
+        syncLockedDatesFromPlan(App.state.currentMealPlan);
+        renderPlanner(App.state.currentMealPlan);
+        if (typeof App.showToast === 'function') {
+          App.showToast(err.message || 'Kon vergrendeling niet opslaan.', 'error');
+        }
+        loadWeekPlanning(App.state.currentWeekMonday);
+      } finally {
+        pendingLockPromises.delete(date);
+      }
+    })();
+
+    pendingLockPromises.set(date, requestPromise);
+    await requestPromise;
   }
 
 
@@ -854,7 +939,20 @@
     });
   }
 
+  document.addEventListener('visibilitychange', () => {
+    if (
+      document.visibilityState === 'visible' &&
+      App.state.token &&
+      App.state.currentView === 'Planner' &&
+      !document.querySelector('dialog[open]')
+    ) {
+      refreshWeekPlanningSilent();
+    }
+  });
+
   App.loadWeekPlanning = loadWeekPlanning;
+  App.refreshWeekPlanningSilent = refreshWeekPlanningSilent;
+  App.waitForPendingLocks = waitForPendingLocks;
   App.loadMonthCalendar = loadMonthCalendar;
   App.loadUnplannedDishes = loadUnplannedDishes;
 

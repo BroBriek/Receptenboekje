@@ -9,20 +9,30 @@
     // Reset day exclusions checkboxes on open
     document.querySelectorAll('input[name="exclude_day"]').forEach(cb => cb.checked = false);
 
-    // Render locked days notice inside the info box
+    // Fetch latest shared week locks and tags from server in parallel
+    await Promise.all([
+      typeof App.refreshWeekPlanningSilent === 'function'
+        ? App.refreshWeekPlanningSilent(true)
+        : Promise.resolve(),
+      App.fetchTags()
+    ]);
+
+    // Render locked days notice inside the info box (ordered Mon-Sun from server data)
     const lockedNoticeContainer = document.getElementById('modalLockedDaysNotice');
     if (lockedNoticeContainer) {
-      if (App.state.lockedDates && App.state.lockedDates.size > 0) {
-        const lockedBadges = Array.from(App.state.lockedDates).map(dateStr => {
-          const item = App.state.currentMealPlan ? App.state.currentMealPlan.find(p => p.date === dateStr) : null;
-          const name = item ? item.dayName : dateStr;
+      const lockedItems = (App.state.currentMealPlan || []).filter(
+        p => p.entry && (p.entry.is_locked === 1 || p.entry.is_locked === true) && p.entry.recipe_id && p.entry.skip_planning !== 1
+      );
+      if (lockedItems.length > 0) {
+        const lockedBadges = lockedItems.map(item => {
+          const name = item.dayName || item.date;
           return `<span class="locked-badge"><i data-lucide="lock" style="width:12px;height:12px;"></i> ${App.escapeHtml(name)}</span>`;
         }).join('');
 
         lockedNoticeContainer.innerHTML = `
           <div class="locked-notice-header">
             <i data-lucide="shield-check" class="locked-notice-icon"></i>
-            <span><strong>${App.state.lockedDates.size} ${App.state.lockedDates.size === 1 ? 'dag is' : 'dagen zijn'} vergrendeld:</strong> ${App.state.lockedDates.size === 1 ? 'deze wordt' : 'deze worden'} behouden</span>
+            <span><strong>${lockedItems.length} ${lockedItems.length === 1 ? 'dag is' : 'dagen zijn'} vergrendeld:</strong> ${lockedItems.length === 1 ? 'deze wordt' : 'deze worden'} behouden</span>
           </div>
           <div class="locked-badges-list">${lockedBadges}</div>
         `;
@@ -37,7 +47,6 @@
     }
 
     // Render tags selection in modal as category chips
-    await App.fetchTags();
     const tagsGrid = document.getElementById('generateTagsGrid');
     if (tagsGrid) {
       if (App.state.allTags && App.state.allTags.length > 0) {
@@ -85,11 +94,14 @@
 
     const tag_ids = Array.from(document.querySelectorAll('input[name="gen_tag"]:checked')).map(el => parseInt(el.value, 10));
 
+    if (typeof App.waitForPendingLocks === 'function') {
+      await App.waitForPendingLocks();
+    }
+
     const payload = {
       start_date: App.state.currentWeekMonday,
       excluded_days,
-      tag_ids,
-      locked_dates: Array.from(App.state.lockedDates)
+      tag_ids
     };
 
     try {
