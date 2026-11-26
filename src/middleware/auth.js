@@ -173,6 +173,61 @@ function requireAuth(req, res, next) {
   next();
 }
 
+
+/**
+ * Express middleware to authenticate Home Assistant requests via HA_API_KEY
+ * (x-api-key header or Authorization: Bearer <key>) or an authenticated web JWT.
+ */
+function requireHomeAssistantAuth(req, res, next) {
+  const configuredKey = (process.env.HA_API_KEY || '').trim();
+  if (!configuredKey) {
+    return res.status(503).json({
+      error: 'Home Assistant integratie is niet geconfigureerd (HA_API_KEY ontbreekt).'
+    });
+  }
+
+  let candidateKey = '';
+  if (typeof req.headers['x-api-key'] === 'string') {
+    candidateKey = req.headers['x-api-key'].trim();
+  } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+    candidateKey = req.headers.authorization.substring(7).trim();
+  }
+
+  if (candidateKey) {
+    const a = Buffer.from(candidateKey, 'utf8');
+    const b = Buffer.from(configuredKey, 'utf8');
+    if (a.length === b.length && crypto.timingSafeEqual(a, b)) {
+      req.isHomeAssistant = true;
+      return next();
+    }
+  }
+
+  let token = null;
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+    token = req.headers.authorization.substring(7).trim();
+  } else if (req.headers.cookie) {
+    const cookies = parseCookies(req.headers.cookie);
+    token = cookies.token;
+  }
+
+  if (token) {
+    const payload = verifyToken(token);
+    if (payload) {
+      req.token = token;
+      req.user = {
+        id: payload.id,
+        username: payload.username,
+        is_admin: payload.is_admin ? 1 : 0,
+        stay_logged_in: !!payload.stay_logged_in,
+        exp: payload.exp
+      };
+      return next();
+    }
+  }
+
+  return res.status(401).json({ error: 'Ongeldige Home Assistant API-sleutel.' });
+}
+
 module.exports = {
   hashPassword,
   verifyPassword,
@@ -181,5 +236,6 @@ module.exports = {
   setTokenCookie,
   clearTokenCookie,
   parseCookies,
-  requireAuth
+  requireAuth,
+  requireHomeAssistantAuth
 };

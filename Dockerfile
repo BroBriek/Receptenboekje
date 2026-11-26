@@ -16,7 +16,7 @@ FROM node:22-alpine AS production
 WORKDIR /app
 
 # Install su-exec to securely step down from root after volume permissions are initialized
-RUN apk add --no-cache su-exec
+RUN apk add --no-cache su-exec tzdata
 
 # Copy built node_modules from deps stage
 COPY --from=deps --chown=node:node /app/node_modules ./node_modules

@@ -124,6 +124,7 @@ Once started with `docker compose up -d`, the container will automatically start
 | `/api/tags`       | `/*`              | Tag management & categorisation               |
 | `/api/ingredients`| `/*`              | Ingredient catalogue & autocompletion         |
 | `/api/meal-plan`  | `/*`              | Shared meal planner & auto-menu generator     |
+| `/api/home-assistant` | `/*`          | Home Assistant & Google Home voice endpoints  |
 
 ---
 
@@ -140,3 +141,19 @@ Once started with `docker compose up -d`, the container will automatically start
 | `recipe_tags`        | Many-to-many recipe ↔ tag            |
 | `meal_plan_entries`  | Calendar-based meal planning         |
 | `migrations`         | Applied migration tracking           |
+
+---
+
+## Home Assistant Integration
+
+Set `HA_API_KEY` and `TZ` (default `Europe/Brussels`) in `.env` to enable the `/api/home-assistant/*` API endpoints. Requests must authenticate via `Authorization: Bearer <HA_API_KEY>` or `x-api-key: <HA_API_KEY>`.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/home-assistant/summary` | Today, tomorrow, day after tomorrow, week overview & shopping list |
+| GET | `/api/home-assistant/day/:query` | Meal details for `vandaag`, `morgen`, `overmorgen`, weekday name, or `YYYY-MM-DD` |
+| GET | `/api/home-assistant/random-recipe` | Random recipe suggestion (optional `?tag=` filter) |
+| POST | `/api/home-assistant/reroll-day` | Pick a different random recipe for a day |
+| POST | `/api/home-assistant/generate-week` | Generate current or next week's menu (preserving locked meals) |
+| POST | `/api/home-assistant/lock-day` | Lock or unlock a planned meal |
+| POST | `/api/home-assistant/skip-day` | Mark a day as skipped / no dinner planned |

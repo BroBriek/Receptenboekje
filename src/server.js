@@ -83,6 +83,7 @@ app.use('/api/recipes', require('./routes/recipes'));
 app.use('/api/tags', require('./routes/tags'));
 app.use('/api/ingredients', require('./routes/ingredients'));
 app.use('/api/meal-plan', require('./routes/mealPlan'));
+app.use('/api/home-assistant', require('./routes/homeAssistant'));
 
 // Fallback for SPA routing: serve index.html for any other requests
 app.get('*all', (req, res, next) => {
